@@ -6,11 +6,13 @@
 // On crée une instance personnalisée pour éviter de répéter
 // l'URL de base et le token JWT dans chaque appel.
 //
-// Utilisation dans un composant ou store :
+// Utilisation dans un composant ou sto
+// .3658re :
 //   import api from '@/services/api'
 //   const { data } = await api.get('/products')
 //   const { data } = await api.post('/auth/login', { email, password })
 // =============================================================
+//test cpùùot0
 
 import axios from 'axios'
 
