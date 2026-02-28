@@ -1,0 +1,32 @@
+/* =============================================================
+   style.css - Styles globaux de SamakMarket
+   ============================================================= */
+
+/* Ces 3 lignes activent Tailwind CSS dans le projet */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* --- Styles globaux supplémentaires --- */
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background-color: #f0f7ff;
+}
+
+/* Transitions douces sur tous les liens et boutons */
+a, button {
+  transition: all 0.2s ease;
+}
+/* Animation pour le défilement des promotions */
+@keyframes slide {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-100%); }
+}
+
+.animate-slide {
+  animation: slide 20s linear infinite;
+}
+
+.promo-slider:hover {
+  animation-play-state: paused;
+}
