@@ -1,0 +1,190 @@
+{
+  "name": "YouTube AI Agent PRO - Fiable",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "cf8c21f5-5f03-405c-a428-5092823f3293",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [400, 384],
+      "id": "3cd77f46-0e19-46a0-84a6-a3cb161f9e5d",
+      "name": "Webhook1"
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/youtube/v3/search",
+        "sendQuery": true,
+        "specifyQuery": "json",
+        "jsonQuery": "={\n  \"part\": \"snippet\",\n  \"q\": \"={{ $('Webhook1').item.json.query.keyword }}\",\n  \"maxResults\": \"25\",\n  \"type\": \"video\",\n  \"order\": \"viewCount\",\n  \"publishedAfter\": \"2025-12-01T00:00:00Z\",\n  \"videoDuration\": \"medium\",\n  \"safeSearch\": \"moderate\",\n  \"key\": \"AIzaSyBSuxz-rXOxOO_aaOcooo3PA8QxdS-H6CY\"\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "name": "Search Videos Fiable",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [700, 384],
+      "id": "search-v2"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "valid-video",
+              "leftValue": "={{ $json.items && $json.items.length > 0 }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "true" }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "name": "Check API Response",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 384],
+      "id": "check-api"
+    },
+    {
+      "parameters": {
+        "functionCode": "const videoIds = items[0].json.items.map(v => v.id.videoId).join(',');\nreturn [{ json: { ids: videoIds, raw: items[0].json.items } }];"
+      },
+      "name": "Extract IDs",
+      "type": "n8n-nodes-base.function",
+      "position": [1100, 300],
+      "id": "50e1c9ac-f872-43e5-ae73-bebac0e163dd"
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/youtube/v3/videos",
+        "sendQuery": true,
+        "specifyQuery": "json",
+        "jsonQuery": "{\n  \"part\": \"statistics,contentDetails\",\n  \"id\": \"={{$json.ids}}\",\n  \"key\": \"AIzaSyBSuxz-rXOxOO_aaOcooo3PA8QxdS-H6CY\"\n}",
+        "options": {}
+      },
+      "name": "Get Stats + Duration",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1300, 300],
+      "id": "stats-duration"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "id": "vues-min",
+              "leftValue": "={{ Number($json.statistics.viewCount) }}",
+              "rightValue": 5000,
+              "operator": { "type": "number", "operation": "largerEqual" }
+            },
+            {
+              "id": "likes-min", 
+              "leftValue": "={{ Number($json.statistics.likeCount) }}",
+              "rightValue": 200,
+              "operator": { "type": "number", "operation": "largerEqual" }
+            },
+            {
+              "id": "duration-ok",
+              "leftValue": "={{ $json.contentDetails.duration }}",
+              "rightValue": "PT5M",
+              "operator": { "type": "string", "operation": "regex", "value2": "^PT(?:[1-9][0-9]*H)?[5-9][0-9]*M|PT[1-9][0-9]*H" }
+            },
+            {
+              "id": "no-shorts",
+              "leftValue": "={{ $json.contentDetails.duration }}",
+              "rightValue": "PT1M",
+              "operator": { "type": "string", "operation": "smaller" }
+            },
+            {
+              "id": "title-quality",
+              "leftValue": "={{ $json.snippet.title.length }}",
+              "rightValue": 120,
+              "operator": { "type": "number", "operation": "smallerEqual" }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "name": "Filter Qualité Stricte",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [1520, 300],
+      "id": "quality-filter"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Merge search + stats + scoring\nconst searchItems = $('Search Videos Fiable').first().json.items;\nconst statsItems = items[0].json.items || [];\nconst statsMap = {};\n\nstatsItems.forEach(stat => {\n  statsMap[stat.id] = stat;\n});\n\nfunction isoToMinutes(iso) {\n  const match = iso.match(/PT(?:(\\d+)H)?(?:(\\d+)M)?(?:(\\d+)S)?/);\n  return (parseInt(match?.[1] || 0) * 60) + parseInt(match?.[2] || 0);\n}\n\nconst keyword = $('Webhook1').first().json.query.keyword.toLowerCase();\nconst keywordWords = keyword.split(' ').filter(w => w.length > 2);\n\n// Score pertinence + qualité\nreturn searchItems\n  .map(video => {\n    const stats = statsMap[video.id.videoId];\n    if (!stats) return null;\n    \n    const title = video.snippet.title.toLowerCase();\n    const relevance = keywordWords.filter(word => title.includes(word)).length / keywordWords.length;\n    const qualityScore = (Number(stats.statistics?.viewCount || 0) / 10000) * 0.4 + \n                        (Number(stats.statistics?.likeCount || 0) / 1000) * 0.3 +\n                        (isoToMinutes(stats.contentDetails.duration) / 60) * 0.3;\n                        \n    return {\n      json: {\n        title: video.snippet.title,\n        channel: video.snippet.channelTitle,\n        views: Number(stats.statistics?.viewCount || 0),\n        likes: Number(stats.statistics?.likeCount || 0),\n        duration: isoToMinutes(stats.contentDetails.duration),\n        durationFormatted: `${Math.floor(isoToMinutes(stats.contentDetails.duration)/60)}:${(isoToMinutes(stats.contentDetails.duration)%60).toString().padStart(2,'0')}`,\n        url: `https://youtube.com/watch?v=${video.id.videoId}`,\n        publishedAt: video.snippet.publishedAt,\n        score: (relevance * 0.6 + qualityScore * 0.4).toFixed(2),\n        keyword\n      }\n    };\n  })\n  .filter(Boolean)\n  .sort((a, b) => parseFloat(b.json.score) - parseFloat(a.json.score))\n  .slice(0, 5);"
+      },
+      "name": "Score & Top 5",
+      "type": "n8n-nodes-base.function",
+      "position": [1740, 300],
+      "id": "scoring"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1RM1yZBWV-uGQQcDI9S_4vdPN_WD2CtuERGzVvTEur84",
+          "mode": "list"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 941325857,
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Title": "={{ $json.title }}",
+            "Chaîne": "={{ $json.channel }}", 
+            "Vues": "={{ $json.views.toLocaleString() }}",
+            "Likes": "={{ $json.likes.toLocaleString() }}",
+            "Durée": "={{ $json.durationFormatted }}",
+            "Score": "={{ $json.score }}",
+            "URL": "=HYPERLINK(\"{{ $json.url }}\", \"🎥 Voir\")",
+            "Mot-clé": "={{ $json.keyword }}",
+            "Date": "={{ $json.publishedAt }}"
+          }
+        },
+        "options": {
+          "valueInputMode": "USER_ENTERED"
+        }
+      },
+      "name": "Save Sheets Pro",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [1960, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "EdaKSW8cv310sSje",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook1": { "main": [["Search Videos Fiable"]] },
+    "Search Videos Fiable": { "main": [["Check API Response"]] },
+    "Check API Response": { 
+      "main": [
+        [["Extract IDs"]] 
+      ] 
+    },
+    "Extract IDs": { "main": [["Get Stats + Duration"]] },
+    "Get Stats + Duration": { "main": [["Filter Qualité Stricte"]] },
+    "Filter Qualité Stricte": { "main": [["Score & Top 5"]] },
+    "Score & Top 5": { "main": [["Save Sheets Pro"]] }
+  },
+  "active": true
+}

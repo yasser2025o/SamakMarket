@@ -1,0 +1,87 @@
+{
+  "name": "YouTube AI Agent PRO",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "yt-agent",
+        "httpMethod": "GET",
+        "responseMode": "lastNode"
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/youtube/v3/search",
+        "method": "GET",
+        "queryParametersUi": {
+          "parameter": [
+            { "name": "part", "value": "snippet" },
+            { "name": "q", "value": "={{$query.keyword}}" },
+            { "name": "maxResults", "value": "5" },
+            { "name": "type", "value": "video" },
+            { "name": "key", "value": "YOUR_YOUTUBE_API_KEY" }
+          ]
+        }
+      },
+      "name": "Search Videos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "return [{ json: { ids: items[0].json.items.map(v => v.id.videoId).join(',') , raw: items[0].json.items } }];"
+      },
+      "name": "Extract IDs",
+      "type": "n8n-nodes-base.function",
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/youtube/v3/videos",
+        "method": "GET",
+        "queryParametersUi": {
+          "parameter": [
+            { "name": "part", "value": "contentDetails" },
+            { "name": "id", "value": "={{$json.ids}}" },
+            { "name": "key", "value": "AIzaSyBSuxz-rXOxOO_aaOcooo3PA8QxdS-H6CY" }
+          ]
+        }
+      },
+      "name": "Get Duration",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "const videos = $items(\"Extract IDs\")[0].json.raw;\nconst durations = items[0].json.items;\n\nfunction formatDuration(iso) {\n  const match = iso.match(/PT(?:(\\d+)H)?(?:(\\d+)M)?(?:(\\d+)S)?/);\n  const h = parseInt(match[1] || 0);\n  const m = parseInt(match[2] || 0);\n  const s = parseInt(match[3] || 0);\n  const totalMinutes = h * 60 + m;\n  return `${totalMinutes}:${s.toString().padStart(2,'0')}`;\n}\n\nreturn videos.map((v, i) => ({\n  json: {\n    title: v.snippet.title,\n    channel: v.snippet.channelTitle,\n    duration: formatDuration(durations[i].contentDetails.duration),\n    url: `https://www.youtube.com/watch?v=${v.id.videoId}`,\n    keyword: $node[\"Webhook\"].json.query.keyword,\n    date: new Date().toISOString()\n  }\n}));"
+      },
+      "name": "Format Final",
+      "type": "n8n-nodes-base.function",
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "sheetId": "941325857",
+        "range": "Sheet1!A:F",
+        "options": {}
+      },
+      "name": "Save to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [1250, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Search Videos", "type": "main", "index": 0 }]] },
+    "Search Videos": { "main": [[{ "node": "Extract IDs", "type": "main", "index": 0 }]] },
+    "Extract IDs": { "main": [[{ "node": "Get Duration", "type": "main", "index": 0 }]] },
+    "Get Duration": { "main": [[{ "node": "Format Final", "type": "main", "index": 0 }]] },
+    "Format Final": { "main": [[{ "node": "Save to Google Sheets", "type": "main", "index": 0 }]] }
+  }
+}

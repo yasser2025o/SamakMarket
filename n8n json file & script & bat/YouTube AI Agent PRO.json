@@ -1,0 +1,282 @@
+{
+  "name": "YouTube AI Agent PRO",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "cf8c21f5-5f03-405c-a428-5092823f3293",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        400,
+        384
+      ],
+      "id": "3cd77f46-0e19-46a0-84a6-a3cb161f9e5d",
+      "name": "Webhook1",
+      "webhookId": "cf8c21f5-5f03-405c-a428-5092823f3293"
+    },
+    {
+      "parameters": {
+        "path": "yt-agent",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        480,
+        144
+      ],
+      "id": "dcaf55b1-51c2-41f6-84a2-c80226ed7cf7",
+      "webhookId": "c0dd55a1-0e79-46c7-8403-6018a547df9a",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/youtube/v3/search",
+        "sendQuery": true,
+        "specifyQuery": "json",
+        "jsonQuery": "={\n  \"part\": \"snippet\",\n  \"q\": \"AI\",\n  \"maxResults\": \"5\",\n  \"type\": \"video\",\n  \"key\": \"APkey\"\n}",
+        "options": {}
+      },
+      "name": "Search Videos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1008,
+        208
+      ],
+      "id": "d550f44c-56e2-4913-abdc-e9b28992a801"
+    },
+    {
+      "parameters": {
+        "functionCode": "return [{ json: { ids: items[0].json.items.map(v => v.id.videoId).join(',') , raw: items[0].json.items } }];"
+      },
+      "name": "Extract IDs",
+      "type": "n8n-nodes-base.function",
+      "position": [
+        1216,
+        208
+      ],
+      "id": "50e1c9ac-f872-43e5-ae73-bebac0e163dd",
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/youtube/v3/videos",
+        "sendQuery": true,
+        "specifyQuery": "json",
+        "jsonQuery": "{\n  \"part\": \"contentDetails\",\n  \"id\": \"={{$json.ids}}\",\n  \"key\": \"Apikey\"\n}",
+        "options": {}
+      },
+      "name": "Get Duration",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1408,
+        208
+      ],
+      "id": "acbc7a91-a6dc-47df-a239-065d02f3dc5a"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Récupérer données search\nconst searchItems = $items(\"Search Videos\")[0].json.items;\n\n// Récupérer données duration\nconst durationItems = items[0].json.items || [];\n\n// Créer un map videoId → duration\nconst durationMap = {};\n\ndurationItems.forEach(video => {\n  durationMap[video.id] = video.contentDetails?.duration || \"PT0S\";\n});\n\n// Fonction conversion ISO → mm:ss\nfunction formatDuration(iso) {\n  const match = iso.match(/PT(?:(\\d+)H)?(?:(\\d+)M)?(?:(\\d+)S)?/);\n\n  const hours = parseInt(match?.[1] || 0);\n  const minutes = parseInt(match?.[2] || 0);\n  const seconds = parseInt(match?.[3] || 0);\n\n  const totalMinutes = (hours * 60) + minutes;\n\n  return `${totalMinutes}:${seconds.toString().padStart(2, '0')}`;\n}\n\n// Construire résultat final sécurisé\nreturn searchItems.map(video => {\n\n  const videoId = video.id.videoId;\n  const isoDuration = durationMap[videoId] || \"PT0S\";\n\n  return {\n    json: {\n      title: video.snippet.title,\n      channel: video.snippet.channelTitle,\n      duration: formatDuration(isoDuration),\n      url: `https://www.youtube.com/watch?v=${videoId}`\n    }\n  };\n});"
+      },
+      "name": "Format Final",
+      "type": "n8n-nodes-base.function",
+      "position": [
+        1616,
+        208
+      ],
+      "id": "a8ad53b9-1e0c-43fa-93b8-8a64c03b9576",
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1RM1yZBWV-uGQQcDI9S_4vdPN_WD2CtuERGzVvTEur84",
+          "mode": "list",
+          "cachedResultName": "sellers",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1RM1yZBWV-uGQQcDI9S_4vdPN_WD2CtuERGzVvTEur84/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 941325857,
+          "mode": "list",
+          "cachedResultName": "Youtube recette",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1RM1yZBWV-uGQQcDI9S_4vdPN_WD2CtuERGzVvTEur84/edit#gid=941325857"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "| title": "={{ $json.title }}",
+            " | channel ": "={{ $json.channel }}",
+            "| duration": "={{ $json.duration }}",
+            " | url ": "={{ $json.url }}",
+            "| keyword ": "={{ $('Webhook1').item.json.query.keyword }}",
+            "date": "={{ $('Search Videos').item.json.items[0].snippet.publishedAt }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "| title",
+              "displayName": "| title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": " | channel ",
+              "displayName": " | channel ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "| duration",
+              "displayName": "| duration",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": " | url ",
+              "displayName": " | url ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "| keyword ",
+              "displayName": "| keyword ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "date",
+              "displayName": "date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "name": "Save to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        1808,
+        208
+      ],
+      "id": "ef32ccf7-3384-4644-ad6b-90d539557fb9",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "EdaKSW8cv310sSje",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook1": {
+      "main": [
+        [
+          {
+            "node": "Search Videos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Search Videos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Videos": {
+      "main": [
+        [
+          {
+            "node": "Extract IDs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract IDs": {
+      "main": [
+        [
+          {
+            "node": "Get Duration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Duration": {
+      "main": [
+        [
+          {
+            "node": "Format Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Final": {
+      "main": [
+        [
+          {
+            "node": "Save to Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "717b6aff-ccef-41fe-a889-92341b62e136",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "4a04a88fe64fa57f1128ae718b86843b51752d69e012eba18493e204de708e66"
+  },
+  "id": "V2bc875ovmyUlf3W",
+  "tags": []
+}

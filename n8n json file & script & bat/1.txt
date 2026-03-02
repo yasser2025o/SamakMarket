@@ -1,0 +1,24 @@
+git add .
+git commit -a -m "message a saisir"
+git push origin DEV
+
+git remote add origin https://github.com/yasser2025o/fish.git
+
+git config --global user.name "yasser2025o"
+git config --global user.email "nagraouiyasser@gmail.com"
+
+| Name       | Value              |
+| ---------- | ------------------ |
+| part       | snippet            |
+| q          | {{$query.keyword}} |
+| maxResults | 5                  |
+| type       | video              |
+| key        | TA_VRAIE_API_KEY   |
+
+{
+  "part": "snippet",
+  "q": "AI",
+  "maxResults": "5",
+  "type": "video",
+  "key":"AIzaSyBSuxz-rXOxOO_aaOcooo3PA8QxdS-H6CY"
+}

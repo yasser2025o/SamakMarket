@@ -1,0 +1,5 @@
+﻿node_modules/
+.env
+dist/
+npm-debug.log
+frontend/public
