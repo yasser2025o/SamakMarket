@@ -63,7 +63,7 @@ app.use('/api/products', require('./routes/products'));
 
 // Routes des publicités → /api/ads/...
 app.use('/api/ads', require('./routes/ads'));
-
+ app.use('/api/admin', require('./routes/admin'));
 // =============================================================
 // ROUTE DE SANTÉ
 // Permet de vérifier rapidement que l'API fonctionne
@@ -130,11 +130,15 @@ sequelize
       console.log(`   POST http://localhost:${PORT}/api/auth/register`);
       console.log(`   POST http://localhost:${PORT}/api/auth/login`);
       console.log(`   GET  http://localhost:${PORT}/api/products`);
+      console.log(`   GET  http://localhost:${PORT}/api/admin`);
+      
       console.log('');
     });
+   
   })
   .catch((erreur) => {
     console.error('❌ Impossible de synchroniser la base de données :', erreur.message);
     console.error('💡 Vérifie que MySQL est bien démarré et que le fichier .env est correct');
     process.exit(1);
   });
+  
