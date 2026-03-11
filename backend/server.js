@@ -89,6 +89,30 @@ app.use('/api/vendeurs', require('./routes/vendeurs'));
 app.use('/api/instagram',  require('./routes/facebook'))  // ← même fichier, routes /instagram/...
 //app.use('/api/whatsapp', require('./routes/whatsapp'))
 // =============================================================
+// À AJOUTER dans backend/server.js
+// Proxy /api/chat → n8n webhook
+// =============================================================
+
+// app.post('/api/chat', async (req, res) => {
+//   try {
+//     const N8N_URL = process.env.N8N_WEBHOOK_URL || 'https://kase-prejudiciable-undistrustfully.ngrok-free.dev/webhook/samakAi'
+
+//     const r = await fetch(N8N_URL, {
+//       method:  'POST',
+//       headers: { 'Content-Type': 'application/json' },
+//       body:    JSON.stringify(req.body),
+//     })
+
+//     const data = await r.json()
+//     res.json(data)
+
+//   } catch (err) {
+//     console.error('Proxy n8n erreur:', err.message)
+//     res.status(503).json({ message: 'Service indisponible' })
+//   }
+// })
+
+// =============================================================
 // ROUTE DE SANTÉ
 // Permet de vérifier rapidement que l'API fonctionne
 // Test : ouvre http://localhost:3000/api/health dans le navigateur
@@ -170,6 +194,9 @@ sequelize
       console.log(`   GET  http://localhost:${PORT}/api/products`);
       console.log(`   GET  http://localhost:${PORT}/api/admin`);
     console.log(`   GET  http://localhost:${PORT}/api/vendeurs`);
+    console.log(`   GET  http://localhost:${PORT}/api/chat`);
+     console.log(`📊  Environnement : ${process.env.N8N_WEBHOOK_URL}`);
+
 
       
       console.log('');
