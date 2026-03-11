@@ -21,6 +21,25 @@ const path    = require('path');
 
 // Importer sequelize + tous les modèles (avec leurs associations)
 const { sequelize } = require('./models');
+// Auto-post Facebook — chargé après les models
+const { Product } = require('./models')
+const { posterSurFacebook, formaterMessageProduit } = require('./routes/facebook')
+
+Product.addHook('afterCreate', async (produit) => {
+  try {
+    if (!produit.is_available) return
+    const { User } = require('./models')
+    const vendeur  = await User.findByPk(produit.seller_id, { attributes: ['name', 'city'] })
+    const message  = formaterMessageProduit(produit, vendeur)
+    const images   = JSON.parse(produit.images || '[]')
+    const image_url = images[0] ? `${process.env.BACKEND_URL}/uploads/${images[0]}` : null
+    const link = `${process.env.FRONTEND_URL}/products/${produit.id}`
+    await posterSurFacebook({ message, image_url, link: image_url ? undefined : link })
+    console.log(`✅ Auto-posté sur Facebook: ${produit.name}`)
+  } catch (err) {
+    console.error('⚠️ Auto-post Facebook échoué:', err.message)
+  }
+})
 
 // Créer l'application Express
 const app = express();
@@ -63,7 +82,12 @@ app.use('/api/products', require('./routes/products'));
 
 // Routes des publicités → /api/ads/...
 app.use('/api/ads', require('./routes/ads'));
+app.use('/api/vendeurs', require('./routes/vendeurs'));
  app.use('/api/admin', require('./routes/admin'));
+ app.use('/api/vendeurs', require('./routes/vendeurs'))
+ app.use('/api/facebook', require('./routes/facebook'))
+app.use('/api/instagram',  require('./routes/facebook'))  // ← même fichier, routes /instagram/...
+//app.use('/api/whatsapp', require('./routes/whatsapp'))
 // =============================================================
 // ROUTE DE SANTÉ
 // Permet de vérifier rapidement que l'API fonctionne
@@ -78,6 +102,11 @@ app.get('/api/health', (req, res) => {
     env: process.env.NODE_ENV,
   });
 });
+
+
+// Démarre WhatsApp Baileys
+//const whatsapp = require('./services/whatsappService')
+//whatsapp.init()
 
 // =============================================================
 // GESTIONNAIRE DE ROUTES INCONNUES
@@ -100,6 +129,12 @@ app.use((err, req, res, next) => {
     message: 'Erreur interne du serveur',
     detail: process.env.NODE_ENV === 'development' ? err.message : 'Contactez l\'administrateur',
   });
+  
+});
+// Ajoute après app.use(cors(...))
+app.use((req, res, next) => {
+  res.setHeader('ngrok-skip-browser-warning', 'true')
+  next()
 });
 
 // =============================================================
@@ -107,6 +142,9 @@ app.use((err, req, res, next) => {
 // On attend que la DB soit prête avant d'écouter les requêtes
 // =============================================================
 const PORT = process.env.PORT || 3000;
+require('dotenv').config()
+require('./services/fbScheduler')
+require('./services/instagramScheduler')
 
 // sequelize.sync() vérifie/crée les tables dans MySQL
 // { alter: true } = met à jour les tables existantes si le modèle a changé
@@ -131,6 +169,8 @@ sequelize
       console.log(`   POST http://localhost:${PORT}/api/auth/login`);
       console.log(`   GET  http://localhost:${PORT}/api/products`);
       console.log(`   GET  http://localhost:${PORT}/api/admin`);
+    console.log(`   GET  http://localhost:${PORT}/api/vendeurs`);
+
       
       console.log('');
     });

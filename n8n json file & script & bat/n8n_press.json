@@ -1,0 +1,44 @@
+{
+  "name": "Collecteur Articles Journaux",
+  "nodes": [
+    {
+      "parameters": {"interval": 60},
+      "name": "Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {"url": "https://www.lemonde.fr/rss/une.xml"},
+      "name": "RSS Read",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {"name": "titre", "value": "={{$json.title}}"},
+            {"name": "lien", "value": "={{$json.link}}"},
+            {"name": "description", "value": "={{$json.description}}"},
+            {"name": "date", "value": "={{$json.pubDate}}"}
+          ]
+        },
+        "options": {}
+      },
+      "name": "Set Données",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [680, 300]
+    }
+  ],
+  "connections": {
+    "Schedule": {"main": [{"node": "RSS Read", "type": "main", "index": 0}]},
+    "RSS Read": {"main": [{"node": "Set Données", "type": "main", "index": 0}]}
+  },
+  "active": false,
+  "settings": {},
+  "versionId": 1
+}

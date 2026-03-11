@@ -1,0 +1,101 @@
+{
+  "name": "BLS Espagne Casablanca Monitor",
+  "nodes": [
+    {
+      "parameters": {
+        "triggerTimes": {
+          "item": [
+            {
+              "mode": "everyX",
+              "value": 3,
+              "unit": "minutes"
+            }
+          ]
+        }
+      },
+      "id": "Cron",
+      "name": "Check Every 3 Minutes",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://www.blsinternational.com/",
+        "responseFormat": "string",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "HTTP",
+      "name": "Check BLS Page",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json}}",
+              "operation": "notContains",
+              "value2": "No appointment available"
+            }
+          ]
+        }
+      },
+      "id": "If",
+      "name": "Check Availability",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [700, 300]
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_CHAT_ID",
+        "text": "🚨 RDV VISA ESPAGNE DISPONIBLE A CASABLANCA ! Vérifie immédiatement BLS."
+      },
+      "id": "Telegram",
+      "name": "Send Telegram Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [950, 250]
+    }
+  ],
+  "connections": {
+    "Check Every 3 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Check BLS Page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check BLS Page": {
+      "main": [
+        [
+          {
+            "node": "Check Availability",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Availability": {
+      "main": [
+        [
+          {
+            "node": "Send Telegram Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

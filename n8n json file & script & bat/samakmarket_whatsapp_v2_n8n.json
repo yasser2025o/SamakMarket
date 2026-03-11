@@ -1,0 +1,195 @@
+{
+  "name": "SamakMarket — WhatsApp Central v2",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp-webhook",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-wa",
+      "name": "📥 Webhook WhatsApp",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [220, 300],
+      "webhookId": "samakmarket-wa-v2"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================\n// PARSER MESSAGE WHATSAPP\n// ============================================\nconst body = $input.first().json;\n\nlet from, message, name;\n\n// Format Meta Cloud API\nif (body.entry) {\n  const msg     = body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];\n  const contact = body.entry?.[0]?.changes?.[0]?.value?.contacts?.[0];\n  from    = msg?.from || '';\n  message = msg?.text?.body || '';\n  name    = contact?.profile?.name || 'Client';\n}\n// Format WPPConnect / Baileys / Test\nelse {\n  from    = (body.from || '').replace('@s.whatsapp.net', '');\n  message = body.body || body.text || body.message || '';\n  name    = body.sender?.pushname || body.name || 'Client';\n}\n\nconst msgLower = message.toLowerCase();\n\n// Extraire ref produit : ref:123\nconst refMatch  = message.match(/ref:(\\d+)/);\nconst produitId = refMatch ? refMatch[1] : null;\n\n// Extraire ville du message\nlet ville = '';\nif (/tanger|طنجة/.test(msgLower))       ville = 'Tanger';\nelse if (/casa|كازا|casablanca/.test(msgLower)) ville = 'Casablanca';\nelse if (/rabat|رباط/.test(msgLower))    ville = 'Rabat';\nelse if (/agadir|أكادير/.test(msgLower)) ville = 'Agadir';\n\n// Détecter l'intention\nlet intent = 'product_inquiry'; // défaut si ref présent\nif (!produitId) {\n  if (/salut|bonjour|salam|أهلا|مرحبا|السلام/.test(msgLower)) intent = 'greeting';\n  else if (/promo|عرض|تخفيض|offre/.test(msgLower))             intent = 'promo';\n  else if (/livraison|توصيل/.test(msgLower))                   intent = 'delivery';\n  else if (/prix|ثمن|كم/.test(msgLower))                       intent = 'price';\n  else if (/stop|désinscrire/.test(msgLower))                  intent = 'stop';\n  else                                                          intent = 'unknown';\n}\n\nreturn [{\n  json: { from, name, message, intent, produitId, ville, timestamp: new Date().toISOString() }\n}];"
+      },
+      "id": "parser",
+      "name": "🧠 Parser Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue":  "={{ $json.produitId }}",
+              "rightValue": "",
+              "operator": { "type": "string", "operation": "notEmpty" }
+            }
+          ]
+        }
+      },
+      "id": "has-ref",
+      "name": "🔀 A un ref produit?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [660, 300]
+    },
+    {
+      "parameters": {
+        "url": "=http://localhost:3000/api/products/{{ $('🧠 Parser Message').first().json.produitId }}",
+        "options": { "timeout": 5000 }
+      },
+      "id": "get-produit",
+      "name": "🐟 Récupérer Produit",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 180]
+    },
+    {
+      "parameters": {
+        "url": "=http://localhost:3000/api/products?is_promo=true&is_available=true&limit=3",
+        "options": { "timeout": 5000 }
+      },
+      "id": "get-promos",
+      "name": "🔥 Récupérer Promos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 420]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================\n// RÉPONSE QUAND CLIENT A CLIQUÉ SUR UN PRODUIT\n// ============================================\nconst parsed  = $('🧠 Parser Message').first().json;\nconst produit = $('🐟 Récupérer Produit').first().json;\nconst { from, name } = parsed;\nconst prenom  = name?.split(' ')[0] || 'صديقي';\n\nif (!produit || produit.message) {\n  return [{ json: {\n    from,\n    msgClient: `🐟 عذراً ${prenom}، هاد المنتج ما لقيناهش دابا.\\n\\nشوف جميع العروض:\\n👉 ${process.env.FRONTEND_URL || 'http://localhost:5173'}`,\n    msgVendeur: null,\n    vendeurPhone: null\n  }}];\n}\n\nconst vendeur = produit.seller || {};\nconst prix    = `${Number(produit.price).toLocaleString('fr-FR')} MAD/${produit.unit}`;\n\n// Message client — confirmation + infos produit\nconst msgClient = `✅ *تم استلام طلبك!*\n\nمرحباً ${prenom} 👋\n\n🐟 *${produit.name}*\n💰 ${prix}\n📍 ${produit.city || vendeur.city || 'Maroc'}\n👨‍🍳 البائع: ${vendeur.name || 'SamakMarket'}\n\n⏳ *البائع سيتواصل معك قريباً!*\nعادةً خلال 15-30 دقيقة ⏱️\n\n_شكراً على ثقتك في SamakMarket_ 🌊`;\n\n// Message vendeur — notification lead\nconst msgVendeur = `🔔 *طلب جديد على SamakMarket!*\n━━━━━━━━━━━━━━━━━━\n👤 *العميل:* ${name}\n📱 *الهاتف:* +${from}\n🐟 *المنتج:* ${produit.name}\n💰 *السعر:* ${prix}\n📍 *المدينة:* ${produit.city || 'Maroc'}\n⏰ *الوقت:* ${new Date().toLocaleTimeString('fr-FR')}\n━━━━━━━━━━━━━━━━━━\n✅ *تواصل معه الآن!*\n📲 https://wa.me/${from}`;\n\nreturn [{ json: {\n  from,\n  msgClient,\n  msgVendeur,\n  vendeurPhone: vendeur.whatsapp || vendeur.phone || null,\n  produitNom: produit.name\n}}];"
+      },
+      "id": "reponse-produit",
+      "name": "✍️ Réponse Produit",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 180]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================\n// RÉPONSE GÉNÉRALE (sans ref produit)\n// ============================================\nconst parsed = $('🧠 Parser Message').first().json;\nconst promos = $('🔥 Récupérer Promos').first().json || [];\nconst { from, name, intent, ville } = parsed;\nconst prenom  = name?.split(' ')[0] || 'صديقي';\nconst baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';\n\nlet msgClient = '';\n\nif (intent === 'greeting') {\n  msgClient = `🐟 *أهلاً ${prenom}!*\n\nمرحباً بك في *SamakMarket* 🌊\nالسمك الطازج من البحر لديك مباشرة!\n\nاختر:\n1️⃣ عروض اليوم 🔥\n2️⃣ ابحث عن بائع 📍\n3️⃣ معلومات التوصيل 🚚\n\nأو تصفح موقعنا:\n👉 ${baseUrl}`;\n}\nelse if (intent === 'promo') {\n  const list = Array.isArray(promos) ? promos.slice(0,3) : [];\n  let ligne = list.map((p,i) => `${i+1}️⃣ *${p.name}* — ${p.price} MAD/${p.unit} 📍${p.city||'Maroc'}`).join('\\n');\n  msgClient = `🔥 *عروض اليوم على SamakMarket!*\\n\\n${ligne||'ما كاينش عروض دابا'}\\n\\n👉 ${baseUrl}`;\n}\nelse if (intent === 'delivery') {\n  msgClient = `🚚 *التوصيل*\\n\\n✅ 2-4 ساعات\\n📍 طنجة، كازا، رباط، أكادير\\n💰 مجاني فوق 150 درهم\\n\\n👉 ${baseUrl}`;\n}\nelse {\n  msgClient = `🐟 *SamakMarket*\\n\\nشكراً ${prenom}!\\n\\nاكتب: *عروض* أو *بائع* أو *توصيل*\\n👉 ${baseUrl}`;\n}\n\nreturn [{ json: { from, msgClient, msgVendeur: null, vendeurPhone: null } }];"
+      },
+      "id": "reponse-generale",
+      "name": "✍️ Réponse Générale",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 420]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:3000/api/whatsapp/send",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "to",      "value": "={{ $json.from }}" },
+            { "name": "message", "value": "={{ $json.msgClient }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "send-client-1",
+      "name": "📤 Répondre Client (produit)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, 120]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue":  "={{ $json.vendeurPhone }}",
+              "rightValue": "",
+              "operator": { "type": "string", "operation": "notEmpty" }
+            }
+          ]
+        }
+      },
+      "id": "check-vendeur",
+      "name": "🔀 Vendeur joignable?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1320, 240]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:3000/api/whatsapp/send",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "to",      "value": "={{ $json.vendeurPhone }}" },
+            { "name": "message", "value": "={{ $json.msgVendeur }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "send-vendeur",
+      "name": "📤 Notifier Vendeur",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1540, 200]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:3000/api/whatsapp/send",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "to",      "value": "={{ $json.from }}" },
+            { "name": "message", "value": "={{ $json.msgClient }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "send-client-2",
+      "name": "📤 Répondre Client (général)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, 420]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"status\": \"ok\" }"
+      },
+      "id": "respond",
+      "name": "✅ OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1540, 420]
+    }
+  ],
+  "connections": {
+    "📥 Webhook WhatsApp":       { "main": [[{ "node": "🧠 Parser Message",      "type": "main", "index": 0 }]] },
+    "🧠 Parser Message":         { "main": [[{ "node": "🔀 A un ref produit?",   "type": "main", "index": 0 }]] },
+    "🔀 A un ref produit?": {
+      "true":  [[{ "node": "🐟 Récupérer Produit", "type": "main", "index": 0 }]],
+      "false": [[{ "node": "🔥 Récupérer Promos",  "type": "main", "index": 0 }]]
+    },
+    "🐟 Récupérer Produit":      { "main": [[{ "node": "✍️ Réponse Produit",    "type": "main", "index": 0 }]] },
+    "🔥 Récupérer Promos":       { "main": [[{ "node": "✍️ Réponse Générale",   "type": "main", "index": 0 }]] },
+    "✍️ Réponse Produit": { "main": [[
+      { "node": "📤 Répondre Client (produit)", "type": "main", "index": 0 },
+      { "node": "🔀 Vendeur joignable?",        "type": "main", "index": 0 }
+    ]]},
+    "✍️ Réponse Générale":       { "main": [[{ "node": "📤 Répondre Client (général)", "type": "main", "index": 0 }]] },
+    "🔀 Vendeur joignable?": {
+      "true":  [[{ "node": "📤 Notifier Vendeur", "type": "main", "index": 0 }]],
+      "false": [[{ "node": "✅ OK",               "type": "main", "index": 0 }]]
+    },
+    "📤 Notifier Vendeur":              { "main": [[{ "node": "✅ OK", "type": "main", "index": 0 }]] },
+    "📤 Répondre Client (général)":     { "main": [[{ "node": "✅ OK", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "tags": [{ "name": "SamakMarket" }]
+}

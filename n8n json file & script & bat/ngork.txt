@@ -1,0 +1,44 @@
+# Dans un nouveau dossier
+cd C:\projects
+git clone https://github.com/wppconnect-team/wppconnect-server.git
+cd wppconnect-server
+npm install
+npm start
+cd C:\projects\samakmarket\backend
+npm install @whiskeysockets/baileys qrcode-terminal
+
+
+cd backend
+npm remove @whiskeysockets/baileys
+npm install @whiskeysockets/baileys@latest
+tu es le n8n automat and node.js with vue, tu as tout dans notre project mon poste, 
+propose moi :un json n8nlocal hosting :
+ to recive whatsap message from samakmarket 
+ stock les donnée ( whatsp, localisation, ville ) 
+ réponds par script sur l'offre (deja sur boutton whatsap) vendeur , promos ...) et de préparer message whatsap a envoyer au vendeur et un autre pour le client que le vendeur vas le contacter soon 
+
+simple et effice est possible que je vends ce services.
+
+
+cd C:\projects\samakmarket
+.\ngrok.exe http 5678
+```
+
+→ Tu obtiens une URL comme `https://abc123.ngrok-free.app`
+
+**Étape 2 — Dans n8n, active le workflow** (bouton toggle en haut à droite) — obligatoire avant de valider
+
+**Étape 3 — Dans Meta Business, mets :**
+```
+URL : https://abc123.ngrok-free.apphttps://cf55-41-140-93-106.ngrok-free.app/webhook/whatsapp-webhook
+Token : samakmarket
+
+
+URL : https://xxx.ngrok.io/api/whatsapp/meta-webhook
+Token : samakmarket
+
+
+
+
+
+$env:N8N_CORS_ALLOWED_ORIGINS="http://localhost:5173"; $env:N8N_DEFAULT_CORS="true"; n8n start

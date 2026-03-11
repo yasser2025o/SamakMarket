@@ -1,0 +1,64 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "VOTRE_ID_GOOGLE_SHEET_ICI"
+        },
+        "sheetName": "Feuille1",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Nom": "={{ $json.name }}",
+            "Adresse": "={{ $json.address }}"
+          },
+          "matchingColumns": [
+            "Nom"
+          ]
+        },
+        "options": {}
+      },
+      "id": "google-sheets-node",
+      "name": "Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [540, 240],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "VOS_CREDENTIALS_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "script",
+        "script": "const page = await browser.newPage();\nawait page.goto('https://www.google.com/maps/search/poissonnerie+casablanca', { waitUntil: 'networkidle2' });\n\nconst results = await page.evaluate(() => {\n  const items = document.querySelectorAll('.Nv2614d347c51478');\n  return Array.from(items).map(item => ({\n    name: item.querySelector('.qBF1Pd')?.innerText || 'Inconnu',\n    address: item.innerText.split('\\n')[1] || 'Pas d\\'adresse'\n  }));\n});\n\nawait page.close();\nreturn results.map(r => ({ json: r }));"
+      },
+      "id": "puppeteer-node",
+      "name": "Puppeteer Scraper",
+      "type": "n8n-nodes-puppeteer.puppeteer",
+      "typeVersion": 1,
+      "position": [320, 240]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "When clicking \"Execute Workflow\"",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [100, 240]
+    }
+  ],
+  "connections": {
+    "manual-trigger": {
+      "main": [[{ "node": "puppeteer-node", "type": "main", "index": 0 }]]
+    },
+    "puppeteer-node": {
+      "main": [[{ "node": "google-sheets-node", "type": "main", "index": 0 }]]
+    }
+  }
+}

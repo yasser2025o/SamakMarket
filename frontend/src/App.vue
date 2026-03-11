@@ -1,22 +1,21 @@
-<!-- =============================================================
-  App.vue - Composant racine de l'application
-  =============================================================
-  Ce composant est le "conteneur" de toute l'application.
-  RouterView affiche le composant correspondant à l'URL actuelle.
-
-  Exemple :
-    URL /          → affiche HomeView.vue (via RouterView)
-    URL /login     → affiche LoginView.vue
-    URL /products  → affiche MarketplaceView.vue
-  ============================================================= -->
-
 <template>
-  <!-- RouterView est un composant spécial de Vue Router -->
-  <!-- Il est remplacé dynamiquement par la vue courante -->
-  <RouterView />
+  <!-- Splash screen au premier chargement -->
+  <SplashScreen v-if="showSplash" @done="showSplash = false" />
+
+  <!-- App principale -->
+  <RouterView v-else />
 </template>
 
 <script setup>
-// RouterView est automatiquement disponible quand vue-router est installé
-// Pas besoin de l'importer explicitement avec Vue Router 4
+import { ref } from 'vue'
+import SplashScreen from './components/SplashScreen.vue'
+
+// Affiche le splash uniquement à la première visite de la session
+// const deja = sessionStorage.getItem('splashVu')
+// const showSplash = ref(!deja)
+const showSplash = ref(true)
+
+// if (!deja) {
+//   sessionStorage.setItem('splashVu', '1')
+// }
 </script>

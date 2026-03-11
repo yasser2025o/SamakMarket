@@ -97,7 +97,24 @@ const User = sequelize.define(
       type: DataTypes.BOOLEAN,
       defaultValue: true,
     },
+    last_login: {
+  type: DataTypes.DATE,
+  allowNull: true,
+  defaultValue: null,
+        },
+        latitude: {
+  type: DataTypes.DECIMAL(10, 7),
+  allowNull: true,
+  defaultValue: null,
+},
+longitude: {
+  type: DataTypes.DECIMAL(10, 7),
+  allowNull: true,
+  defaultValue: null,
+},
   },
+        // Dernière connexion — mise à jour à chaque login
+
   {
     // --- Options du modèle ---
     tableName: 'users',    // Nom exact de la table MySQL
@@ -124,8 +141,10 @@ const User = sequelize.define(
           user.password = await bcrypt.hash(user.password, 10);
         }
       },
+
     },
   }
+  
 );
 
 // =============================================================

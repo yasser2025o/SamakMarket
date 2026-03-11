@@ -104,6 +104,10 @@ const Product = sequelize.define(
       defaultValue: false,
     },
 
+    is_promo: {
+  type: DataTypes.BOOLEAN,
+  defaultValue: false,
+},
     // --- Compteur de vues ---
     // S'incrémente chaque fois qu'un visiteur ouvre la page du produit
     views_count: {

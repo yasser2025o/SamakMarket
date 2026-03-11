@@ -1,0 +1,188 @@
+{
+  "name": "SamakMarket — WhatsApp Auto-Réponse",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp-webhook",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-wa",
+      "name": "📥 Webhook WhatsApp",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "samakmarket-wa-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================\n// PARSER LE MESSAGE WHATSAPP ENTRANT\n// Compatible Meta Cloud API + WPPConnect\n// ============================================\nconst body = $input.first().json;\n\n// Supporter les 2 formats\nlet from, message, name;\n\n// Format Meta Cloud API\nif (body.entry) {\n  const entry   = body.entry?.[0];\n  const changes = entry?.changes?.[0];\n  const value   = changes?.value;\n  const msg     = value?.messages?.[0];\n  const contact = value?.contacts?.[0];\n  from    = msg?.from || '';\n  message = msg?.text?.body || msg?.interactive?.button_reply?.title || '';\n  name    = contact?.profile?.name || 'Client';\n}\n// Format WPPConnect / Baileys\nelse if (body.from) {\n  from    = body.from.replace('@s.whatsapp.net', '');\n  message = body.body || body.text || '';\n  name    = body.sender?.pushname || 'Client';\n}\n\nconst msgLower = message.toLowerCase().trim();\n\n// Détecter l'intention\nlet intent = 'unknown';\nlet ville  = '';\n\n// Mots clés intentions\nif (/salut|bonjour|salam|ahlan|مرحبا|السلام/.test(msgLower)) {\n  intent = 'greeting';\n}\nelse if (/promo|promotion|offre|solde|عرض|تخفيض/.test(msgLower)) {\n  intent = 'promo';\n}\nelse if (/vendeur|vendor|poisson|سمك|بائع|كم الثمن|prix/.test(msgLower)) {\n  intent = 'product';\n}\nelse if (/livraison|توصيل|deliver/.test(msgLower)) {\n  intent = 'delivery';\n}\nelse if (/tanger|طنجة/.test(msgLower))  { intent = 'city'; ville = 'Tanger'; }\nelse if (/casa|دارالبيضاء|casablanca/.test(msgLower)) { intent = 'city'; ville = 'Casablanca'; }\nelse if (/rabat|رباط/.test(msgLower))   { intent = 'city'; ville = 'Rabat'; }\nelse if (/agadir|أكادير/.test(msgLower)) { intent = 'city'; ville = 'Agadir'; }\nelse if (/فين|وين|أين|where|localisation|ville|city/.test(msgLower)) {\n  intent = 'location';\n}\nelse if (/stop|désinscrire|unsubscribe/.test(msgLower)) {\n  intent = 'stop';\n}\n\nreturn [{\n  json: {\n    from,\n    name,\n    message,\n    intent,\n    ville,\n    timestamp: new Date().toISOString(),\n    raw: body\n  }\n}];"
+      },
+      "id": "parser",
+      "name": "🧠 Parser Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "schema": "public",
+        "table": "whatsapp_contacts",
+        "columns": "phone, name, ville, last_message, last_intent, last_seen",
+        "additionalFields": {
+          "mode": "independently",
+          "conflictTarget": "phone",
+          "updateFields": "name, last_message, last_intent, last_seen"
+        }
+      },
+      "id": "save-contact",
+      "name": "💾 Sauvegarder Contact",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [680, 180],
+      "credentials": {
+        "postgres": { "id": "samakmarket-db", "name": "SamakMarket DB" }
+      }
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:3000/api/products?is_promo=true&is_available=true&limit=3",
+        "options": { "timeout": 5000 }
+      },
+      "id": "get-promos",
+      "name": "🔥 Récupérer Promos API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "url": "=http://localhost:3000/api/vendeurs/proches?ville={{ $('🧠 Parser Message').first().json.ville }}&limit=3",
+        "options": { "timeout": 5000 }
+      },
+      "id": "get-vendeurs",
+      "name": "👨‍🍳 Récupérer Vendeurs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 420]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================\n// GÉNÉRER LA RÉPONSE WHATSAPP AUTOMATIQUE\n// ============================================\nconst parsed  = $('🧠 Parser Message').first().json;\nconst promos  = $('🔥 Récupérer Promos API').first().json || [];\nconst vendeurs = $('👨‍🍳 Récupérer Vendeurs').first().json || [];\n\nconst { from, name, intent, ville } = parsed;\nconst prenom = name?.split(' ')[0] || 'صديقي';\n\nlet msgClient  = '';\nlet msgVendeur = '';\nlet notifierVendeur = false;\n\n// ── RÉPONSES PAR INTENTION ───────────────────────────────────\n\nif (intent === 'greeting') {\n  msgClient = `🐟 *أهلاً ${prenom}!*\n\nمرحباً بك في *SamakMarket* 🌊\nالسمك الطازج من البحر لديك مباشرة!\n\nاختر ما يناسبك:\n1️⃣ عروض اليوم 🔥\n2️⃣ ابحث عن بائع قريب 📍\n3️⃣ معلومات التوصيل 🚚\n\nاكتب رقم اختيارك أو سؤالك بالعربية 😊`;\n}\n\nelse if (intent === 'promo') {\n  let liste = '';\n  const promosList = Array.isArray(promos) ? promos.slice(0, 3) : [];\n  \n  if (promosList.length > 0) {\n    promosList.forEach((p, i) => {\n      liste += `\\n${i+1}️⃣ *${p.name}* — ${p.price} MAD/${p.unit} 📍${p.city || 'Maroc'}`;\n    });\n    msgClient = `🔥 *عروض اليوم على SamakMarket!*\n${liste}\n\n✅ السمك طازج 100% من البحر مباشرة\n👉 للطلب: ${process.env.FRONTEND_URL || 'http://localhost:5173'}\n\nتريد تواصل مع البائع؟ اكتب *بائع* 👨‍🍳`;\n  } else {\n    msgClient = `🔥 *عروض اليوم*\n\nما كاينش عروض دابا، عاود جرب من بعد شوية!\n\n👉 شوف جميع المنتجات: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`;\n  }\n}\n\nelse if (intent === 'product' || intent === 'city') {\n  const vendeursList = Array.isArray(vendeurs) ? vendeurs.slice(0, 3) : [];\n  let listeV = '';\n  \n  if (vendeursList.length > 0) {\n    vendeursList.forEach((v, i) => {\n      listeV += `\\n${i+1}️⃣ *${v.name}* — ${v.city}`;\n      if (v.distance) listeV += ` (${v.distance} كم)`;\n    });\n    msgClient = `👨‍🍳 *البائعين القريبين منك${ville ? ' في ' + ville : ''}:*\n${listeV}\n\n📱 سنتواصل معك قريباً!\n🛒 ${process.env.FRONTEND_URL || 'http://localhost:5173'}`;\n    notifierVendeur = true;\n  } else {\n    msgClient = `👨‍🍳 ما لقيناش بائع قريب منك دابا.\n\nعاود اكتب مدينتك:\n🏙️ طنجة / كازا / رباط / أكادير\n\nأو زور موقعنا:\n👉 ${process.env.FRONTEND_URL || 'http://localhost:5173'}`;\n  }\n  \n  // Message pour le vendeur\n  if (notifierVendeur && vendeursList[0]) {\n    msgVendeur = `🔔 *طلب جديد على SamakMarket!*\n\n👤 *العميل:* ${name}\n📱 *الهاتف:* ${from}${ville ? '\\n📍 *المدينة:* ' + ville : ''}\n⏰ *الوقت:* ${new Date().toLocaleTimeString('fr-FR')}\n\n✅ تواصل معه قريباً!\n_SamakMarket — للسمك الطازج_`;\n  }\n}\n\nelse if (intent === 'delivery') {\n  msgClient = `🚚 *التوصيل على SamakMarket*\n\n✅ توصيل سريع خلال 2-4 ساعات\n📍 متوفر في: طنجة، كازا، رباط، أكادير\n💰 التوصيل مجاني عند الطلب فوق 150 درهم\n\n🛒 اطلب الآن:\n👉 ${process.env.FRONTEND_URL || 'http://localhost:5173'}\n\nأو تواصل مع البائع مباشرة 👨‍🍳`;\n}\n\nelse if (intent === 'location') {\n  msgClient = `📍 *أين تسكن؟*\n\nاكتب مدينتك لنجد لك أقرب بائع سمك:\n\n🏙️ *طنجة*\n🏙️ *كازا*  \n🏙️ *رباط*\n🏙️ *أكادير*\n\nأو أرسل موقعك الجغرافي 📌`;\n}\n\nelse if (intent === 'stop') {\n  msgClient = `تم إلغاء الاشتراك ✅\n\nمع السلامة ${prenom}! 👋\nإذا رجعت نحن هنا دائماً 🐟`;\n}\n\nelse {\n  msgClient = `🐟 *SamakMarket*\n\nشكراً على تواصلك ${prenom}!\n\nاكتب:\n🔥 *عروض* — لعروض اليوم\n👨‍🍳 *بائع* — للبائعين القريبين\n🚚 *توصيل* — معلومات التوصيل\n\n👉 ${process.env.FRONTEND_URL || 'http://localhost:5173'}`;\n}\n\nreturn [{\n  json: {\n    from,\n    name,\n    msgClient,\n    msgVendeur,\n    notifierVendeur,\n    vendeurPhone: vendeurs?.[0]?.phone || vendeurs?.[0]?.whatsapp || null,\n    intent,\n    ville\n  }\n}];"
+      },
+      "id": "generate-response",
+      "name": "✍️ Générer Réponse",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "url": "=http://localhost:3000/api/whatsapp/send",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "to",      "value": "={{ $json.from }}" },
+            { "name": "message", "value": "={{ $json.msgClient }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "send-client",
+      "name": "📤 Envoyer Client",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 220]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false },
+          "conditions": [
+            {
+              "leftValue":  "={{ $json.notifierVendeur }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "true" }
+            }
+          ]
+        }
+      },
+      "id": "check-vendeur",
+      "name": "🔀 Notifier Vendeur?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1120, 380]
+    },
+    {
+      "parameters": {
+        "url": "=http://localhost:3000/api/whatsapp/send",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "to",      "value": "={{ $json.vendeurPhone }}" },
+            { "name": "message", "value": "={{ $json.msgVendeur }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "send-vendeur",
+      "name": "📤 Envoyer Vendeur",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"status\": \"ok\" }"
+      },
+      "id": "respond-webhook",
+      "name": "✅ Répondre Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1340, 460]
+    }
+  ],
+  "connections": {
+    "📥 Webhook WhatsApp": {
+      "main": [[{ "node": "🧠 Parser Message", "type": "main", "index": 0 }]]
+    },
+    "🧠 Parser Message": {
+      "main": [[
+        { "node": "💾 Sauvegarder Contact",    "type": "main", "index": 0 },
+        { "node": "🔥 Récupérer Promos API",   "type": "main", "index": 0 },
+        { "node": "👨‍🍳 Récupérer Vendeurs",    "type": "main", "index": 0 }
+      ]]
+    },
+    "💾 Sauvegarder Contact":  { "main": [[]] },
+    "🔥 Récupérer Promos API": {
+      "main": [[{ "node": "✍️ Générer Réponse", "type": "main", "index": 0 }]]
+    },
+    "👨‍🍳 Récupérer Vendeurs": {
+      "main": [[{ "node": "✍️ Générer Réponse", "type": "main", "index": 0 }]]
+    },
+    "✍️ Générer Réponse": {
+      "main": [[
+        { "node": "📤 Envoyer Client",    "type": "main", "index": 0 },
+        { "node": "🔀 Notifier Vendeur?", "type": "main", "index": 0 }
+      ]]
+    },
+    "🔀 Notifier Vendeur?": {
+      "true":  [[{ "node": "📤 Envoyer Vendeur",   "type": "main", "index": 0 }]],
+      "false": [[{ "node": "✅ Répondre Webhook",   "type": "main", "index": 0 }]]
+    },
+    "📤 Envoyer Vendeur": {
+      "main": [[{ "node": "✅ Répondre Webhook", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": null,
+  "tags": [{ "name": "SamakMarket" }],
+  "meta": { "instanceId": "samakmarket-local" }
+}

@@ -69,16 +69,9 @@
 
       </form>
 
-      <!-- 
-        Accès rapide démo — montre les 3 rôles disponibles
-        Utile pour tester rapidement sans retaper les identifiants
-        RETIRE ce bloc en production
-      -->
       <div class="demo-section">
         <div class="demo-titre">Accès rapide (démo)</div>
         <div class="demo-btns">
-
-          <!-- Admin -->
           <button @click="loginDemo('admin')" class="demo-btn demo-admin">
             <span class="demo-ico">🛡️</span>
             <div>
@@ -87,8 +80,6 @@
             </div>
             <span class="demo-arrow">→</span>
           </button>
-
-          <!-- Vendeur -->
           <button @click="loginDemo('seller')" class="demo-btn demo-seller">
             <span class="demo-ico">🐟</span>
             <div>
@@ -97,8 +88,6 @@
             </div>
             <span class="demo-arrow">→</span>
           </button>
-
-          <!-- Acheteur -->
           <button @click="loginDemo('buyer')" class="demo-btn demo-buyer">
             <span class="demo-ico">🛒</span>
             <div>
@@ -107,11 +96,9 @@
             </div>
             <span class="demo-arrow">→</span>
           </button>
-
         </div>
       </div>
 
-      <!-- Liens bas -->
       <div class="login-footer">
         <RouterLink to="/register" class="footer-link">Créer un compte vendeur →</RouterLink>
         <RouterLink to="/" class="footer-link-soft">← Retour à la marketplace</RouterLink>
@@ -129,17 +116,13 @@ import { useAuthStore } from '../stores/auth'
 const router = useRouter()
 const auth   = useAuthStore()
 
-const email    = ref('')
-const password = ref('')
+const email      = ref('')
+const password   = ref('')
 const chargement = ref(false)
 const erreur     = ref('')
 const voirMdp    = ref(false)
 
 // ── Redirection selon le rôle ─────────────────────────────────
-// C'est ici que la magie opère :
-//   admin  → /admin      (AdminDashboardView)
-//   seller → /dashboard  (DashboardView vendeur)
-//   buyer  → /           (Marketplace)
 const redirigerSelonRole = (role) => {
   if (role === 'admin')  return router.push('/admin')
   if (role === 'seller') return router.push('/dashboard')
@@ -151,49 +134,43 @@ const soumettre = async () => {
   chargement.value = true
   erreur.value     = ''
 
-  const res = await auth.seConnecter(email.value, password.value)
-
-  if (res.succes) {
-    // Redirige vers le bon espace selon le rôle de l'utilisateur
-    redirigerSelonRole(auth.user?.role)
-  } else {
-    erreur.value = res.message
+  try {
+    const res = await auth.seConnecter(email.value, password.value)
+    if (res.succes) {
+      redirigerSelonRole(auth.user?.role)
+    } else {
+      erreur.value = res.message
+    }
+  } catch (e) {
+    erreur.value = 'Erreur de connexion. Réessayez.'
+  } finally {
+    chargement.value = false
   }
-
-  chargement.value = false
+  // ← RIEN après le finally — c'était le bug : le code continuait après le try/catch
 }
 
-// ── Connexion démo rapide (sans API) ─────────────────────────
-// Simule une session pour tester l'interface
-// À retirer en production !
+// ── Connexion démo rapide ─────────────────────────────────────
 const loginDemo = (role) => {
   const comptes = {
     admin:  { id:1, name:'Admin SamakMarket', email:'admin@samakmarket.ma',  role:'admin',  city:'Casablanca' },
     seller: { id:2, name:'Mohamed Diallo',    email:'m.diallo@samak.ma',     role:'seller', city:'Tanger'     },
     buyer:  { id:3, name:'Visiteur',          email:'visiteur@samak.ma',     role:'buyer',  city:''           },
   }
-  // Simule la session sans appel API
   localStorage.setItem('token', `demo-token-${role}`)
   localStorage.setItem('user',  JSON.stringify(comptes[role]))
-  
-  // Force la mise à jour du store
   auth.token = `demo-token-${role}`
   auth.user  = comptes[role]
-
   redirigerSelonRole(role)
 }
 </script>
 
 <style scoped>
-/* ── Page ── */
 .login-page {
   min-height: 100vh;
   display: flex; align-items: center; justify-content: center;
   background: linear-gradient(160deg, #020c1b 0%, #040f20 50%, #020a16 100%);
   position: relative; overflow: hidden; padding: 24px;
 }
-
-/* ── Vagues de fond ── */
 .ocean-bg { position: absolute; inset: 0; pointer-events: none; }
 .wave {
   position: absolute; left: -10%; width: 120%;
@@ -208,8 +185,6 @@ const loginDemo = (role) => {
   0%,100% { transform: translateX(0) scaleY(1); }
   50%     { transform: translateX(5%) scaleY(3); }
 }
-
-/* ── Carte principale ── */
 .login-card {
   width: 100%; max-width: 420px;
   background: linear-gradient(145deg, rgba(255,255,255,.06), rgba(212,175,55,.03));
@@ -223,8 +198,6 @@ const loginDemo = (role) => {
   from { opacity:0; transform: translateY(24px) scale(.97); }
   to   { opacity:1; transform: translateY(0) scale(1); }
 }
-
-/* ── Header ── */
 .login-header { text-align: center; margin-bottom: 28px; }
 .logo-ring {
   width: 64px; height: 64px; border-radius: 50%; margin: 0 auto 12px;
@@ -236,15 +209,11 @@ const loginDemo = (role) => {
 }
 .login-title { color: white; font-size: 1.5rem; font-weight: 800; letter-spacing: .02em; }
 .login-sub   { color: rgba(255,255,255,.3); font-size: .82rem; margin-top: 4px; }
-
-/* ── Erreur ── */
 .erreur-box {
   background: rgba(255,80,80,.08); border: 1px solid rgba(255,80,80,.2);
   color: #ff8080; padding: 10px 14px; border-radius: 10px;
   font-size: .84rem; margin-bottom: 16px;
 }
-
-/* ── Formulaire ── */
 .login-form  { display: flex; flex-direction: column; gap: 14px; }
 .champ       { display: flex; flex-direction: column; gap: 5px; }
 .champ-label { color: rgba(255,255,255,.45); font-size: .78rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
@@ -263,8 +232,6 @@ const loginDemo = (role) => {
 .champ-input::placeholder { color: rgba(255,255,255,.2); }
 .champ-eye   { background: none; border: none; cursor: pointer; font-size: .85rem; opacity: .5; padding: 0; transition: opacity .2s; }
 .champ-eye:hover { opacity: 1; }
-
-/* ── Bouton connexion ── */
 .btn-login {
   width: 100%; padding: 14px;
   background: linear-gradient(135deg, #d4af37, #f5d57a);
@@ -278,8 +245,6 @@ const loginDemo = (role) => {
 .btn-login:disabled { opacity: .6; cursor: not-allowed; }
 .btn-spinner { display: inline-block; animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
-
-/* ── Section démo ── */
 .demo-section { margin-top: 24px; }
 .demo-titre {
   text-align: center; color: rgba(255,255,255,.2);
@@ -292,7 +257,6 @@ const loginDemo = (role) => {
 }
 .demo-titre::before { left: 0; }
 .demo-titre::after  { right: 0; }
-
 .demo-btns { display: flex; flex-direction: column; gap: 8px; }
 .demo-btn  {
   display: flex; align-items: center; gap: 12px;
@@ -305,21 +269,15 @@ const loginDemo = (role) => {
 .demo-role { color: white; font-size: .85rem; font-weight: 700; text-align: left; }
 .demo-desc { color: rgba(255,255,255,.3); font-size: .72rem; text-align: left; }
 .demo-arrow { margin-left: auto; color: rgba(255,255,255,.2); font-size: .85rem; }
-
-/* Couleurs par rôle */
 .demo-admin  { border-color: rgba(212,175,55,.2); }
 .demo-admin:hover  { background: rgba(212,175,55,.08); border-color: rgba(212,175,55,.35); }
 .demo-admin  .demo-role { color: #f5d57a; }
-
 .demo-seller { border-color: rgba(13,202,240,.15); }
 .demo-seller:hover { background: rgba(13,202,240,.06); border-color: rgba(13,202,240,.3); }
 .demo-seller .demo-role { color: #0dcaf0; }
-
 .demo-buyer  { border-color: rgba(37,211,102,.12); }
 .demo-buyer:hover  { background: rgba(37,211,102,.06); border-color: rgba(37,211,102,.25); }
 .demo-buyer  .demo-role { color: #25d366; }
-
-/* ── Footer ── */
 .login-footer { margin-top: 24px; display: flex; flex-direction: column; gap: 8px; align-items: center; }
 .footer-link      { color: rgba(212,175,55,.7); font-size: .82rem; text-decoration: none; transition: color .2s; }
 .footer-link:hover { color: #f5d57a; }

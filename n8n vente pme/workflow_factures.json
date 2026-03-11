@@ -1,0 +1,128 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "readPdf",
+        "binaryPropertyName": "data.file"
+      },
+      "name": "Lire le PDF",
+      "type": "n8n-nodes-base.readPdf",
+      "typeVersion": 1,
+      "position": [
+        250,
+        300
+      ],
+      "notes": "Extrait le texte brut du PDF upload\u00e9 via Streamlit."
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:11434/api/generate",
+        "options": {},
+        "jsonParameters": true,
+        "sendHeaders": true,
+        "headerParameters": {
+          "Content-Type": "application/json"
+        },
+        "bodyParameters": {
+          "model": "syrealit",
+          "prompt": "Extrais les informations suivantes de ce texte de facture :\\n- Num\u00e9ro de facture\\n- Date (format JJ/MM/AAAA)\\n- Nom du client\\n- Montant HT (en MAD)\\n- TVA (en MAD)\\n- Montant TTC (en MAD)\\n\\nTexte : {{ $input.all()[0].json.text }}\\n\\nR\u00e9ponds uniquement avec un JSON valide :\\n{\\n  \"numero\": \"...\",\\n  \"date\": \"...\",\\n  \"client\": \"...\",\\n  \"montantHT\": ...,\\n  \"tva\": ...,\\n  \"montantTTC\": ...\\n}"
+        }
+      },
+      "name": "Envoyer au LLM Syrealit",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        450,
+        300
+      ],
+      "notes": "Envoie le texte extrait au LLM local pour analyse. N\u00e9cessite que Syrealit soit en cours d'ex\u00e9cution."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Fallback si le LLM n'est pas disponible\nconst text = $input.all()[0].json.text;\nconst regexResult = {\n  numero: text.match(/Facture[\\s:N\u00b0]*([A-Za-z0-9-]+)/)?.[1] || null,\n  date: text.match(/Date[\\s:]*([0-9]{2}\\/[0-9]{2}\\/[0-9]{4})/)?.[1] || null,\n  client: text.match(/Client[\\s:]*([A-Za-z0-9\\s]+)/)?.[1] || null,\n  montantHT: text.match(/Montant HT[\\s:]*([0-9,.]+)/)?.[1] ? parseFloat(text.match(/Montant HT[\\s:]*([0-9,.]+)/)[1].replace(',', '.').trim()) : null,\n  tva: text.match(/TVA[\\s(20%)]*([0-9,.]+)/)?.[1] ? parseFloat(text.match(/TVA[\\s(20%)]*([0-9,.]+)/)[1].replace(',', '.').trim()) : null,\n  montantTTC: text.match(/Montant TTC[\\s:]*([0-9,.]+)/)?.[1] ? parseFloat(text.match(/Montant TTC[\\s:]*([0-9,.]+)/)[1].replace(',', '.').trim()) : null\n};\n\n// Si le LLM a r\u00e9pondu, on utilise sa r\u00e9ponse, sinon on utilise les regex\nconst llmResponse = $input.all()[1]?.json?.response;\nreturn llmResponse ? JSON.parse(llmResponse) : regexResult;"
+      },
+      "name": "Nettoyer les donn\u00e9es",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        650,
+        300
+      ],
+      "notes": "Nettoie les donn\u00e9es extraites par le LLM ou utilise des regex en fallback."
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "sheetName": "Factures",
+        "operation": "append",
+        "range": "A1",
+        "options": {}
+      },
+      "name": "Enregistrer dans Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 1,
+      "position": [
+        850,
+        300
+      ],
+      "notes": "Enregistre les donn\u00e9es dans une feuille Google Sheets. N\u00e9cessite une configuration OAuth2."
+    },
+    {
+      "parameters": {
+        "to": "{{ $input.all()[0].json.email || 'client@example.com' }}",
+        "subject": "Confirmation de traitement de la facture {{ $input.all()[0].json.numero }}",
+        "html": "Bonjour,\\n\\nVotre facture {{ $input.all()[0].json.numero }} a \u00e9t\u00e9 enregistr\u00e9e avec succ\u00e8s.\\n\\nCordialement,\\nVotre \u00e9quipe"
+      },
+      "name": "Envoyer un email de confirmation",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [
+        850,
+        500
+      ],
+      "notes": "Envoie un email de confirmation au client."
+    }
+  ],
+  "connections": {
+    "Lire le PDF": {
+      "main": [
+        [
+          {
+            "node": "Envoyer au LLM Syrealit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Envoyer au LLM Syrealit": {
+      "main": [
+        [
+          {
+            "node": "Nettoyer les donn\u00e9es",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Nettoyer les donn\u00e9es": {
+      "main": [
+        [
+          {
+            "node": "Enregistrer dans Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Envoyer un email de confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

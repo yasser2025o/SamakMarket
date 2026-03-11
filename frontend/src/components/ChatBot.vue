@@ -174,7 +174,7 @@ import { ref, nextTick, onMounted } from 'vue'
     - Notifier le vendeur sur WhatsApp
     - Sauvegarder dans une DB
 */
-const WEBHOOK_URL = 'http://localhost:5678/webhook-test/d12ce0dc-c5a6-4af6-9f32-1e30cba57584'
+const WEBHOOK_URL = 'https://kase-prejudiciable-undistrustfully.ngrok-free.dev/webhook/samakAi'
 // =============================================================
 
 // ── State du chatbot ─────────────────────────────────────────
@@ -278,16 +278,24 @@ const envoyerMessage = async () => {
     const sessionId = 'samak_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5)
 
     const reponse = await fetch(WEBHOOK_URL, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        message:   texte,
-        timestamp: new Date().toISOString(),
-        source:    'SamakMarket chatbot',
-        page:      window.location.pathname,
-        sessionId: sessionId,  // ← même ID pour toute la conversation
-      }),
-    })
+  method: 'POST',
+   mode: 'cors', 
+  headers: { 
+    'Content-Type': 'application/json',
+    'ngrok-skip-browser-warning': 'true' // ← AJOUTE CETTE LIGNE
+    
+  },
+  //body: JSON.stringify({ message: texte })
+  body: JSON.stringify({
+    message: texte,
+    timestamp: new Date().toISOString(),
+    source: 'SamakMarket chatbot',
+    page: window.location.pathname,
+    sessionId: sessionId,
+    
+  }),
+});
+
 
     // 3. Lire la réponse de n8n
     /*

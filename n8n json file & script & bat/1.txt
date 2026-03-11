@@ -25,4 +25,65 @@ git config --global user.email "nagraouiyasser@gmail.com"
 
 
 
+facbook 60 jour : https://graph.facebook.com/oauth/access_token
+  ?grant_type=fb_exchange_token
+&client_id=3901326396838000
+&client_secret=1588199f07fa8028e421e8e9e13211b0
+&fb_exchange_token=EAA8HZBDVutBsBQwZAJ1bTe3lmIT1D8oOQ0uSFwHzHvZCstnWrRIHnrTALcK2yOdPZBI27Qgqq4pu2XEcEYBF32fzqz4j0i1ocoZCKKsszLQC2ZCnGEDuqKwZBWLePNqifXXfi3E5JaS2eWTE1ryH8mTm8SF7nBGiiwE8mU8LMmrStsJQVIEx3XN519ocr1ov7IzOVOnZA64IQnnIwhF6umZAZAuz1dZAoeqtLlghnuhuU05IVZBkNjKhmau8W8j9qDaoZAcDKgaxOXAsR5Q8ZD
+
+
+app secret : 1588199f07fa8028e421e8e9e13211b0
+app id : 4230887280391195
+fb page id 61582281476442
+facebook token api : EAA8HZBDVutBsBQ8qd3UFl9gSXGZAFeGuRLUy8n7dQvYLunBzTZA2xYe7VXzuCP1cfYS6qpl0x1ctgVWs6IjbrpkZA9mhKFdxKSMTfsw0iuQGS9IV06h34aZBN7c8odfFvFT7NTtCmCSZAtWpHiDxKssKAb7wTOnfbjAQ3yViPL9IJaciFO4v2tlepadsoCrZAeBNZCZCVMEnxJY6xD1Yi4Dx37xNORJ2anAl3lwZDZD
+
+serpapi maps : cff1e8ac1d5103bc57d2059fc0df703d5df911d9d604b3b302a22d1271927c55
+
 press mediastack : cb2e8d75631b76bbba0a43d051102f99
+
+streamlit run streamlit_llm.py --server.port 8501 --server.headless=true
+
+
+ALTER TABLE `products` ADD `is_promo` BOOLEAN NOT NULL DEFAULT TRUE ;
+UPDATE users SET role = 'admin' WHERE email = 'admin@samak.ma';
+
+
+fetch('http://localhost:3000/api/auth/register', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    name: 'Admin',
+    email: 'admin@samak.ma',
+    password: 'admin123',
+    role: 'seller'
+  })
+}).then(r => r.json()).then(console.log)
+
+---------------------modifier le password-------------------------------------------
+$body = @{
+    currentPassword = "admin123"
+    newPassword     = "nouveauPassword456"
+} | ConvertTo-Json
+
+Invoke-RestMethod -Uri "http://localhost:3000/api/auth/update-password" `
+                  -Method Post `
+                  -ContentType "application/json" `
+                  -Body $body
+
+
+
+ User-Agent: Mozilla/5.0
+Accept: text/html
+--------------------------------------------------
+ID_DE_VOTRE_PAGE?fields=instagram_business_account
+
+{
+  "instagram_business_account": {
+    "id": "17841440773340779"
+  },
+
+  "id": "1095313683656099"
+}
+cle secret c76df3bca34eb0040af679d65c215ad2
+id app insta : 1534338295364262
+token : EAAVzePkPeqYBQzJFSSyZAG1ZB0eaVxcFeFCqLBphrZAEiZA7PHUxfBuMZBG7NKvjBaVEnjDJLY9xmqC7ZCVfB9yQOqL7q4Vo4WwXRiVTucpyt7ZCfntVkKoObqBSSotWBzTX4fU5BclIVwzqHYPmm0pNv7TEZBRnQMGZAQK2mjaV1H1YMa2j1R47fIFAFDveqTOGTMWFBAxZCUZAZAr6nd12o3bY5K4l3hLLDyNx

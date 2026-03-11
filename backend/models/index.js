@@ -86,6 +86,7 @@ Review.belongsTo(User, {
   as: 'buyer',
 });
 
+
 // =============================================================
 // On exporte tout pour pouvoir importer depuis les controllers
 // Utilisation : const { User, Product } = require('../models');

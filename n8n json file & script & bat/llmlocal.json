@@ -1,0 +1,17 @@
+{
+  "parameters": {
+    "method": "POST",
+    "url": "http://localhost:8000/summarize",
+    "sendBody": true,
+    "bodyParameters": {
+      "parameters": [
+        {"name": "data", "value": "={{ $json.data }}"}
+      ]
+    },
+    "options": {
+      "bodyContentType": "json"
+    }
+  },
+  "name": "DistilBART Local",
+  "type": "n8n-nodes-base.httpRequest"
+}

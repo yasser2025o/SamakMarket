@@ -1,0 +1,35 @@
+import streamlit as st
+from transformers import pipeline
+
+st.title("🤖 Résumé Local → n8n (GRATUIT)")
+
+# ✅ MODÈLE BART VALIDE (résumé automatique)
+try:
+    summarizer = pipeline("summarization", model="facebook/bart-large-cnn")
+    st.success("✅ BART chargé !")
+except:
+    # Fallback simple (si modèle lent)
+    st.info("🚀 Mode texte simple")
+    summarizer = None
+
+# API pour n8n
+if "text" in st.query_params:
+    article = st.query_params["text"][0][:800]  # Limite 800 caractères
+    
+    if summarizer:
+        with st.spinner("BART résume..."):
+            try:
+                resume = summarizer(article, max_length=60, min_length=20, do_sample=False)
+                result = resume[0]["summary_text"]
+            except:
+                result = f"Résumé: {article[:100]}..."  # Fallback
+    else:
+        # Résumé simple (100% fiable)
+        result = f"📝 {article[:120]}..." 
+    
+    # JSON pour n8n
+    st.json({"resume": result})
+    st.stop()
+
+st.success("✅ API OK ! Teste maintenant:")
+st.code("http://localhost:8501/?text=Les forces ukrainiennes...")

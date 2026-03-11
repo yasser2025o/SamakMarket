@@ -1,0 +1,212 @@
+{
+  "name": "Articles News → AI Résumé → Google Sheets",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "1",
+      "name": "Schedule (1h)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://api.mediastack.com/v1/news?access_key=cb2e8d75631b76bbba0a43d051102f99&countries=fr&limit=10",
+        "options": {}
+      },
+      "id": "2",
+      "name": "HTTP Request News API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "operation": "splitOutItems",
+        "fieldToSplitOut": "data"
+      },
+      "id": "3",
+      "name": "Split Items (data[])",
+      "type": "n8n-nodes-base.itemLists",
+      "typeVersion": 3,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "agent": "openAi",
+        "model": "gpt-4o-mini",
+        "options": {
+          "responseFormat": "json_mode"
+        }
+      },
+      "id": "4",
+      "name": "AI Agent (Résumé)",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [900, 300],
+      "credentials": {
+        "openAiApi": {
+          "id": "VOTRE_OPENAI_CRED",
+          "name": "OpenAI"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "titre_original",
+              "value": "={{ $('HTTP Request News API').item.json.title }}"
+            },
+            {
+              "name": "resume_ia",
+              "value": "={{ $('AI Agent (Résumé)').item.json.content }}"
+            },
+            {
+              "name": "auteur",
+              "value": "={{ $('HTTP Request News API').item.json.author || $('HTTP Request News API').item.json.source }}"
+            },
+            {
+              "name": "source",
+              "value": "={{ $('HTTP Request News API').item.json.source }}"
+            },
+            {
+              "name": "description",
+              "value": "={{ $('HTTP Request News API').item.json.description }}"
+            },
+            {
+              "name": "url",
+              "value": "={{ $('HTTP Request News API').item.json.url }}"
+            },
+            {
+              "name": "image",
+              "value": "={{ $('HTTP Request News API').item.json.image }}"
+            },
+            {
+              "name": "categorie",
+              "value": "={{ $('HTTP Request News API').item.json.category }}"
+            },
+            {
+              "name": "pays",
+              "value": "={{ $('HTTP Request News API').item.json.country }}"
+            },
+            {
+              "name": "publie_le",
+              "value": "={{ $('HTTP Request News API').item.json.published_at }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "5",
+      "name": "Set (Original + Résumé)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "append",
+        "documentId": "1371465336",
+        "sheetName": {
+          "id": 0,
+          "__rl": true,
+          "value": "Sheet1",
+          "key": "Sheet1"
+        },
+        "options": {
+          "useLetterCaseHeaders": true
+        }
+      },
+      "id": "6",
+      "name": "Google Sheets (GID 1371465336)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [1340, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "VOTRE_GOOGLE_CRED",
+          "name": "Google Sheets"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule (1h)": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request News API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request News API": {
+      "main": [
+        [
+          {
+            "node": "Split Items (data[])",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Items (data[])": {
+      "main": [
+        [
+          {
+            "node": "AI Agent (Résumé)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent (Résumé)": {
+      "main": [
+        [
+          {
+            "node": "Set (Original + Résumé)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set (Original + Résumé)": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets (GID 1371465336)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2026-03-04T00:33:00.000Z",
+  "versionId": "1"
+}

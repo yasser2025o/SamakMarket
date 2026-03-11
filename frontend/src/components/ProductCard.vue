@@ -39,12 +39,16 @@
         <div class="flex gap-2">
           <a v-if="produit.seller?.whatsapp" :href="lienWhatsApp" target="_blank" rel="noopener noreferrer"
             class="bg-green-500 hover:bg-green-600 text-white py-1.5 px-4 rounded-xl text-xs font-semibold">📱 WhatsApp</a>
-          <a v-if="produit.seller?.phone" :href="`tel:${produit.seller.phone}`"
-            class="bg-blue-800 hover:bg-blue-900 text-white py-1.5 px-4 rounded-xl text-xs font-semibold">📞 Appeler</a>
+            <a class="bg-blue-800 hover:bg-blue-900 text-white py-1.5 px-4 rounded-xl text-xs font-semibold">
+            <BtnPartagerFB :produit="produit" />
+          </a>
+          <!-- <a v-if="produit.seller?.phone" :href="`tel:${produit.seller.phone}`"
+            class="bg-blue-800 hover:bg-blue-900 text-white py-1.5 px-4 rounded-xl text-xs font-semibold">📞 Appeler</a> -->
         </div>
       </div>
     </div>
   </div>
+        
 
   <!-- MODE GRILLE 2 ou GRILLE 4 -->
   <div v-else class="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow border border-gray-100">
@@ -75,8 +79,11 @@
       <div class="mt-4 flex gap-2">
         <a v-if="produit.seller?.whatsapp" :href="lienWhatsApp" target="_blank" rel="noopener noreferrer"
           class="flex-1 bg-green-500 hover:bg-green-600 text-white py-2 px-3 rounded-xl text-xs font-semibold text-center">📱 WhatsApp</a>
-        <a v-if="produit.seller?.phone" :href="`tel:${produit.seller.phone}`"
-          class="flex-1 bg-blue-800 hover:bg-blue-900 text-white py-2 px-3 rounded-xl text-xs font-semibold text-center">📞 Appeler</a>
+          <a class="bg-blue-800 hover:bg-blue-900 text-white py-2 px-3 rounded-xl text-xs font-semibold">
+          <BtnPartagerFB :produit="produit" />
+        </a>
+        <!-- <a v-if="produit.seller?.phone" :href="`tel:${produit.seller.phone}`"
+          class="flex-1 bg-blue-800 hover:bg-blue-900 text-white py-2 px-3 rounded-xl text-xs font-semibold text-center">📞 Appeler</a> -->
         <span v-if="!produit.seller?.whatsapp && !produit.seller?.phone" class="text-gray-400 text-xs italic">Coordonnées non disponibles</span>
       </div>
     </div>
@@ -85,6 +92,8 @@
 </template>
 
 <script setup>
+import BtnPartagerFB from './BtnPartagerFB.vue'
+
 import { computed, ref } from 'vue'
 
 const props = defineProps({
@@ -162,6 +171,7 @@ const imageAffichee = computed(() => {
 const emojiCategorie = computed(() =>
   emojisCategorie[props.produit.category] || '🐟'
 )
+
 
 // Lien WhatsApp
 const lienWhatsApp = computed(() => {

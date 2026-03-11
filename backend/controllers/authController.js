@@ -28,6 +28,7 @@ const genererToken = (userId, role) => {
     process.env.JWT_SECRET,    // Clé secrète pour signer (dans .env)
     { expiresIn: process.env.JWT_EXPIRES_IN || '7d' } // Durée de validité
   );
+  
 };
 
 // =============================================================
@@ -117,6 +118,10 @@ exports.login = async (req, res) => {
     // 4. Vérifier le mot de passe avec bcrypt
     // checkPassword() est définie dans le modèle User
     const motDePasseCorrect = await utilisateur.checkPassword(password);
+
+console.log('🔑 Login - mdp saisi:', password)
+console.log('🔒 Login - hash en DB:', utilisateur.password)
+console.log('✅ Login - résultat bcrypt:', motDePasseCorrect)
     if (!motDePasseCorrect) {
       return res.status(401).json({
         message: 'Email ou mot de passe incorrect.',
@@ -125,7 +130,7 @@ exports.login = async (req, res) => {
 
     // 5. Générer le token JWT
     const token = genererToken(utilisateur.id, utilisateur.role);
-
+await utilisateur.update({ last_login: new Date() });
     // 6. Répondre avec le token
     res.json({
       message: `Bienvenue ${utilisateur.name} ! 👋`,
