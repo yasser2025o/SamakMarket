@@ -1,0 +1,14 @@
+version: "2"
+authtoken: 2zIhD0jI7SRnr49z3lHuBejtIb7_57WD1rqJzAsEY7
+
+tunnels:
+  frontend:
+    proto: http
+    addr: 5173
+    url: https://kase-prejudiciable-undistrustfully.ngrok-free.dev
+  backend:
+    proto: http
+    addr: 3000
+  n8n:
+    proto: http
+    addr: 5678

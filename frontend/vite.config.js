@@ -20,5 +20,6 @@ export default defineConfig({
 
   server: {
     port: 5173, // Port du serveur de développement
+    allowedHosts: ['.ngrok-free.dev'] // allow publish ngrok bach idouz hhh
   },
 })
