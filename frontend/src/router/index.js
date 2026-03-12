@@ -130,6 +130,16 @@
 
 import { createRouter, createWebHistory } from 'vue-router'
 import MarketplaceView from '../views/MarketplaceView.vue'
+import LegalView from '../views/LegalView.vue'
+
+const routes = [
+  // ... vos autres routes
+  {
+    path: '/conditions-generales',
+    name: 'Legal',
+    component: LegalView
+  }
+]
 
 const router = createRouter({
   history: createWebHistory(),

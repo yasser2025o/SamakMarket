@@ -108,6 +108,25 @@ const Product = sequelize.define(
   type: DataTypes.BOOLEAN,
   defaultValue: false,
 },
+is_flash: {
+type: DataTypes.TINYINT(1),
+defaultValue: 0,
+},
+flash_price: {
+type: DataTypes.DECIMAL(10, 2),
+allowNull: true,
+defaultValue: null,
+},
+flash_start: {
+type: DataTypes.DATE,
+allowNull: true,
+defaultValue: null,
+},
+flash_end: {
+type: DataTypes.DATE,
+allowNull: true,
+defaultValue: null,
+},
     // --- Compteur de vues ---
     // S'incrémente chaque fois qu'un visiteur ouvre la page du produit
     views_count: {

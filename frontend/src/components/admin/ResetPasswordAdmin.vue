@@ -46,7 +46,8 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="v in vendeursFiltres" :key="v.id" class="rpa-row">
+          <tr v-for="v in vendeursLimites" :key="v.id" class="rpa-row">
+
 
             <!-- Avatar + nom -->
             <td class="rpa-cell-vendeur">
@@ -158,6 +159,9 @@ const enCours       = ref({})  // { vendeurId: true } pendant l'envoi
 const succes        = ref({})  // { vendeurId: true } après succès
 
 const toast = ref({ visible: false, message: '', type: 'ok' })
+const vendeursLimites = computed(() => vendeursFiltres.value.slice(0, 10));
+
+
 
 // ── Filtrage ─────────────────────────────────────────────────
 const vendeursFiltres = computed(() => {
@@ -169,7 +173,8 @@ const vendeursFiltres = computed(() => {
     (v.city || '').toLowerCase().includes(q)
   )
 })
-
+// ── Limite à 10 vendeurs ─────────────────────────────────────
+//const vendeursLimites = computed(() => vendeursFiltres.value.slice(0, 10));
 // ── Format date ──────────────────────────────────────────────
 const formatDate = (date) => {
   if (!date) return 'Jamais connecté'

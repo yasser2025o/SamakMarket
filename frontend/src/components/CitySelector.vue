@@ -32,7 +32,7 @@
         🌍 Toutes
       </button> -->
 
-      <!-- Chip GPS "Près de moi"
+       Chip GPS "Près de moi"
       <button
         @click="geoLocaliser"
         :class="['cs-chip cs-chip-gps', gpsActif && 'cs-chip-on']"

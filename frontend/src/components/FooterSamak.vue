@@ -170,7 +170,10 @@
 
           <!-- Mentions légales -->
           <div class="flex gap-4 text-xs text-blue-300/40">
-            <a href="#" class="hover:text-blue-300 transition">Conditions d'utilisation</a>
+            <a 
+            href="/samakmarket-legal.pdf"
+             target="_blank" 
+             class="hover:text-blue-300 transition">Conditions d'utilisation</a>
             <a href="#" class="hover:text-blue-300 transition">Confidentialité</a>
             <a href="#" class="hover:text-blue-300 transition">Cookies</a>
           </div>

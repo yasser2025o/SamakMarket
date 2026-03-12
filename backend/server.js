@@ -87,11 +87,11 @@ app.use('/api/vendeurs', require('./routes/vendeurs'));
  app.use('/api/vendeurs', require('./routes/vendeurs'))
  app.use('/api/facebook', require('./routes/facebook'))
 app.use('/api/instagram',  require('./routes/facebook'))  // ← même fichier, routes /instagram/...
-//app.use('/api/whatsapp', require('./routes/whatsapp'))
+app.use('/api/flash', require('./routes/flash'))
 // =============================================================
 // À AJOUTER dans backend/server.js
 // Proxy /api/chat → n8n webhook
-// =============================================================
+// //=============================================================
 
 // app.post('/api/chat', async (req, res) => {
 //   try {
@@ -99,7 +99,7 @@ app.use('/api/instagram',  require('./routes/facebook'))  // ← même fichier, 
 
 //     const r = await fetch(N8N_URL, {
 //       method:  'POST',
-//       headers: { 'Content-Type': 'application/json' },
+//   //    headers: { 'Content-Type': 'application/json' },
 //       body:    JSON.stringify(req.body),
 //     })
 

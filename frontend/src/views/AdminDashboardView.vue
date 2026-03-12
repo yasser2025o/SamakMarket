@@ -444,6 +444,7 @@
           <!-- <FbPostAdmin /> 
           <SocialPostAdmin /> -->
           <!-- <WhatsAppAdmin /> -->
+           <FlashAdmin />
           </div> 
        
       </div> 
@@ -459,6 +460,7 @@ import ResetPasswordAdmin from '../components/admin/ResetPasswordAdmin.vue'
 import FbPostAdmin from '../components/admin/FbPostAdmin.vue'
 import SocialPostAdmin from '../components/admin/SocialpostAdmin.vue'
 import WhatsAppAdmin from '../components/admin/WhatsAppAdmin.vue'
+import FlashAdmin from '../components/admin/FlashAdmin.vue'
 // ── Navigation sidebar ────────────────────────────────────────
 const page     = ref('overview')
 const menuOpen = ref(false)
