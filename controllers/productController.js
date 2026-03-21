@@ -18,7 +18,7 @@ const { Product, User } = require('../models');
 
 // Op = "Operators" de Sequelize, pour faire des conditions SQL avancées
 // Exemple : Op.like → LIKE en SQL (recherche partielle)
-const { Op } = require('sequelize');
+const { Op, where } = require('sequelize');
 
 // =============================================================
 // GET /api/products
@@ -30,89 +30,147 @@ const { Op } = require('sequelize');
 //   ?category=Thon     → filtre par catégorie
 //   ?page=1&limit=12   → pagination
 // =============================================================
+// exports.getAllProducts = async (req, res) => {
+//   try {
+//     // Récupérer les paramètres de l'URL
+//     // Si non fournis, on utilise des valeurs par défaut
+//     const {
+// search,
+// city,
+// category,
+// seller_id,
+// today, // ← ajoute cette ligne
+// page = 1,
+// sort,
+// limit = 12,
+// } = req.query;;
+
+//     // Construire les conditions de filtrage dynamiquement
+//     // On part d'une base : seulement les produits disponibles
+//     const conditions = { is_available: true };
+
+//     // Ajouter les filtres si fournis
+//     if (search) {
+//       // Op.like + % = recherche partielle (LIKE '%sardine%')
+//       // Trouve "Sardine fraîche", "Ma sardine", "Sardines grillées"...
+//       conditions.name = { [Op.like]: `%${search}%` };
+//     }
+//     if (city) {
+//       conditions.city = { [Op.like]: `%${city}%` };
+//     }
+//     if (seller_id) {
+//       conditions.seller_id = parseInt(seller_id);
+//     }
+//     if (category) {
+//       conditions.category = category; // Recherche exacte pour la catégorie
+//     }
+//     if (today === 'true') {
+//       const debutJour = new Date()
+//       debutJour.setHours(0, 0, 0, 0)
+//       conditions.created_at = { [Op.gte]: debutJour }
+//     }
+    
+
+//     // Calculer l'offset pour la pagination
+//     // Page 1 : offset 0 (cocd e au début)
+//     // Page 2 : offset 12 (saute les 12 premiers)
+//     // Page 3 : offset 24, etc.
+//     const offset = (parseInt(page) - 1) * parseInt(limit);
+
+//     // Requête principale avec Sequelize
+//     const { count, rows: produits } = await Product.findAndCountAll({
+//       where: conditions,
+
+//       // "include" = JOIN en SQL
+//       // On charge aussi le vendeur de chaque produit en une seule requête
+//       include: [
+//         {
+//           model: User,
+//           as: 'seller',      // Alias défini dans models/index.js
+//           attributes: [      // Colonnes à récupérer du vendeur
+//             'id',
+//             'name',
+//             'phone',
+//             'whatsapp',
+//             'city',
+//             'avatar',
+//           ],
+//         },
+//       ],
+
+//       // Tri : produits sponsorisés en premier, puis du plus récent au plus ancien
+//       order: [
+//         ['is_featured', 'DESC'], // DESC = les "true" avant les "false"
+//         ['created_at', 'DESC'],
+//       ],
+
+//       limit: parseInt(limit),  // Nombre de résultats par page
+//       offset,                  // Décalage pour la pagination
+//     });
+
+//     // Retourner les produits avec infos de pagination
+//     res.json({
+//       produits,
+//       pagination: {
+//         total: count,                            // Nombre total de produits
+//         page: parseInt(page),                   // Page actuelle
+//         pages: Math.ceil(count / parseInt(limit)), // Nombre total de pages
+//         limit: parseInt(limit),                 // Produits par page
+//         order: [sort === 'updated_at'? 'updated_at' : 'created_at', 'DESC']
+//       },
+//     });
+
+//   } catch (erreur) {
+//     console.error('❌ Erreur getAllProducts :', erreur);
+//     res.status(500).json({ message: 'Erreur serveur', detail: erreur.message });
+//   }
+// };
 exports.getAllProducts = async (req, res) => {
   try {
-    // Récupérer les paramètres de l'URL
-    // Si non fournis, on utilise des valeurs par défaut
     const {
       search,
       city,
       category,
+      seller_id,
+      today,
       page = 1,
       limit = 12,
-    } = req.query;
+    } = req.query; // ✅ Nettoyé : une seule déclaration propre
 
-    // Construire les conditions de filtrage dynamiquement
-    // On part d'une base : seulement les produits disponibles
     const conditions = { is_available: true };
 
-    // Ajouter les filtres si fournis
-    if (search) {
-      // Op.like + % = recherche partielle (LIKE '%sardine%')
-      // Trouve "Sardine fraîche", "Ma sardine", "Sardines grillées"...
-      conditions.name = { [Op.like]: `%${search}%` };
-    }
-    if (city) {
-      conditions.city = { [Op.like]: `%${city}%` };
-    }
-    if (category) {
-      conditions.category = category; // Recherche exacte pour la catégorie
+    if (search) conditions.name = { [Op.like]: `%${search}%` };
+    if (city) conditions.city = { [Op.like]: `%${city}%` };
+    if (seller_id) conditions.seller_id = parseInt(seller_id);
+    if (category) conditions.category = category;
+
+    if (today === 'true') {
+      const debutJour = new Date();
+      debutJour.setHours(0, 0, 0, 0);
+      conditions.createdAt = { [Op.gte]: debutJour }; // ✅ Vérifie que c'est bien createdAt (majuscule)
     }
 
-    // Calculer l'offset pour la pagination
-    // Page 1 : offset 0 (cocd e au début)
-    // Page 2 : offset 12 (saute les 12 premiers)
-    // Page 3 : offset 24, etc.
     const offset = (parseInt(page) - 1) * parseInt(limit);
 
-    // Requête principale avec Sequelize
     const { count, rows: produits } = await Product.findAndCountAll({
       where: conditions,
-
-      // "include" = JOIN en SQL
-      // On charge aussi le vendeur de chaque produit en une seule requête
-      include: [
-        {
-          model: User,
-          as: 'seller',      // Alias défini dans models/index.js
-          attributes: [      // Colonnes à récupérer du vendeur
-            'id',
-            'name',
-            'phone',
-            'whatsapp',
-            'city',
-            'avatar',
-          ],
-        },
-      ],
-
-      // Tri : produits sponsorisés en premier, puis du plus récent au plus ancien
-      order: [
-        ['is_featured', 'DESC'], // DESC = les "true" avant les "false"
-        ['created_at', 'DESC'],
-      ],
-
-      limit: parseInt(limit),  // Nombre de résultats par page
-      offset,                  // Décalage pour la pagination
+      include: [{
+        model: User,
+        as: 'seller',
+        attributes: ['id', 'name', 'city', 'avatar'],
+      }],
+      order: [['createdAt', 'DESC']],
+      limit: parseInt(limit),
+      offset: offset,
+      distinct: true // ✅ Ajoute ceci pour éviter les erreurs de count avec include
     });
 
-    // Retourner les produits avec infos de pagination
-    res.json({
-      produits,
-      pagination: {
-        total: count,                            // Nombre total de produits
-        page: parseInt(page),                   // Page actuelle
-        pages: Math.ceil(count / parseInt(limit)), // Nombre total de pages
-        limit: parseInt(limit),                 // Produits par page
-      },
-    });
-
+    res.json({ produits, total: count });
   } catch (erreur) {
-    console.error('❌ Erreur getAllProducts :', erreur);
-    res.status(500).json({ message: 'Erreur serveur', detail: erreur.message });
+    console.error('❌ Erreur détaillée :', erreur); // Regarde ton terminal backend pour voir le message exact
+    res.status(500).json({ message: 'Erreur SQL', detail: erreur.message });
   }
 };
-
 // =============================================================
 // GET /api/products/mine
 // Récupérer MES produits (pour le dashboard vendeur)
@@ -154,7 +212,9 @@ exports.getProduct = async (req, res) => {
     if (!produit) {
       return res.status(404).json({ message: 'Produit non trouvé' });
     }
-
+    const nbProduits = produit.seller_id
+    ? await Product.count({ where: {seller_id: produit.seller_id, is_available:true} })
+    : 0;
     // Incrémenter le compteur de vues à chaque consultation
     // increment() fait un UPDATE products SET views_count = views_count + 1
     await produit.increment('views_count');

@@ -1,3 +1,5 @@
+
+
 // ## Le flux complet
 // ```
 // 1. Visiteur ouvre SamakMarket
@@ -295,8 +297,20 @@ parseFloat(v.latitude), parseFloat(v.longitude)
 }))
 .sort((a, b) => a.distance_km - b.distance_km)
 .slice(0, parseInt(limit))
+// Requête 2 — produits par vendeur
+const ids = result.map(v => v.id)
+const produits = await Product.findAll({
+where: { seller_id: ids, is_available: true },
+attributes: ['id', 'name', 'price', 'unit', 'is_promo', 'seller_id'],
+order: [['is_promo', 'DESC']],
+})
 
-res.json(result)
+const resultAvecProduits = result.map(v => ({
+...v,
+produits: produits.filter(p => p.seller_id === v.id).slice(0, 6),
+}))
+
+res.json(resultAvecProduits)
 } catch (err) {
 res.status(500).json({ message: 'Erreur serveur', detail: err.message })
 }

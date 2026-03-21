@@ -130,7 +130,12 @@ console.log('✅ Login - résultat bcrypt:', motDePasseCorrect)
 
     // 5. Générer le token JWT
     const token = genererToken(utilisateur.id, utilisateur.role);
-await utilisateur.update({ last_login: new Date() });
+//await utilisateur.update({ last_login: new Date() });
+const sequelize = require('../config/database')
+await sequelize.query(
+'UPDATE users SET last_login = NOW() WHERE id = ?',
+{ replacements: [utilisateur.id] }
+)
     // 6. Répondre avec le token
     res.json({
       message: `Bienvenue ${utilisateur.name} ! 👋`,

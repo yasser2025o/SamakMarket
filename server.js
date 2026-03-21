@@ -126,8 +126,20 @@ app.get('/api/health', (req, res) => {
     env: process.env.NODE_ENV,
   });
 });
+// city from ip
+app.get("/api/detect-city", async (req, res) => {
+  try {
+    const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
 
+    const response = await fetch(`https://ipapi.co/${ip}/json/`);
+    const data = await response.json();
 
+    res.json({ city: data.city || "ALL" });
+
+  } catch (e) {
+    res.json({ city: "ALL" });
+  }
+});
 // Démarre WhatsApp Baileys
 //const whatsapp = require('./services/whatsappService')
 //whatsapp.init()
