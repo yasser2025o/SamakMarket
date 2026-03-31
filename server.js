@@ -111,7 +111,7 @@ app.use('/api/flash', require('./routes/flash'))
 //     res.status(503).json({ message: 'Service indisponible' })
 //   }
 // })
-
+app.use('/api/admin/wa-orders', require('./routes/wa-orders'))
 // =============================================================
 // ROUTE DE SANTÉ
 // Permet de vérifier rapidement que l'API fonctionne

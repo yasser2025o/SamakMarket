@@ -1,7 +1,9 @@
 ﻿backend/node_modules/
+backend/wa-session/
 frontend/node_modules/
 logo_pic/
 .env
 dist/
 npm-debug.log
 frontend/public
+node_modules
