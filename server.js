@@ -53,9 +53,29 @@ const app = express();
 // CORS = Cross-Origin Resource Sharing
 // Autorise le frontend (localhost:5173) à appeler l'API (localhost:3000)
 // Sans ça, le navigateur bloquerait les requêtes (sécurité browser)
+// ✅ CORS dynamique — accepte localhost + ngrok + domaine de production
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-  credentials: true, // Autoriser les cookies si nécessaire plus tard
+  origin: (origin, callback) => {
+    // Pas d'origin = Postman, mobile, curl → OK
+    if (!origin) return callback(null, true)
+
+    const autorisé =
+      origin.includes('localhost') ||          // dev local
+      origin.includes('127.0.0.1') ||          // dev local
+      origin.includes('ngrok-free.app') ||     // ngrok v3
+      origin.includes('ngrok-free.dev') ||     // ngrok v3 variante
+      origin.includes('ngrok.io') ||           // ngrok v2
+      origin === process.env.FRONTEND_URL ||   // prod (.env)
+      origin === process.env.NGROK_URL         // ngrok URL fixe (.env optionnel)
+
+    if (autorisé) {
+      callback(null, true)
+    } else {
+      console.warn(`🚫 CORS bloqué pour : ${origin}`)
+      callback(new Error(`CORS bloqué pour : ${origin}`))
+    }
+  },
+  credentials: true,
 }));
 
 // Parser le corps des requêtes JSON
@@ -80,14 +100,23 @@ app.use('/api/auth', require('./routes/auth'));
 // Routes des produits → /api/products/...
 app.use('/api/products', require('./routes/products'));
 
-// Routes des publicités → /api/ads/...
+// =============================================================
+// ROUTES DE L'API
+// =============================================================
+
+// 1. AJOUTE CETTE LIGNE ICI (AVANT LES AUTRES)
+app.use('/api/guide', require('./routes/guide'));
+
+// 2. Le reste de vos routes
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/products', require('./routes/products'));
 app.use('/api/ads', require('./routes/ads'));
 app.use('/api/vendeurs', require('./routes/vendeurs'));
- app.use('/api/admin', require('./routes/admin'));
- app.use('/api/vendeurs', require('./routes/vendeurs'))
- app.use('/api/facebook', require('./routes/facebook'))
-app.use('/api/instagram',  require('./routes/facebook'))  // ← même fichier, routes /instagram/...
-app.use('/api/flash', require('./routes/flash'))
+app.use('/api/admin', require('./routes/admin'));
+app.use('/api/facebook', require('./routes/facebook'));
+app.use('/api/instagram', require('./routes/facebook'));
+app.use('/api/flash', require('./routes/flash'));
+app.use('/api/admin/wa-orders', require('./routes/wa-orders'));
 // =============================================================
 // À AJOUTER dans backend/server.js
 // Proxy /api/chat → n8n webhook

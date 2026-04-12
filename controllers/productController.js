@@ -231,110 +231,81 @@ exports.getProduct = async (req, res) => {
 // Créer un nouveau produit
 // Route protégée → nécessite d'être vendeur
 // =============================================================
+//const { Product } = require('../models');
+
+// --- CRÉATION ---
 exports.createProduct = async (req, res) => {
   try {
-    const {
-      name, description, price, unit,
-      quantity, category, images, city,
-    } = req.body;
+    const data = { ...req.body };
 
-    // Validation : le nom et le prix sont obligatoires
-    if (!name || !price) {
-      return res.status(400).json({
-        message: 'Le nom et le prix sont obligatoires',
-      });
+    // Si Multer a reçu un fichier
+    if (req.file) {
+      data.images = JSON.stringify([req.file.filename]);
     }
 
-    // Créer le produit
-    // seller_id = l'ID du vendeur connecté (depuis le token JWT)
     const produit = await Product.create({
-      seller_id: req.user.id, // ← Automatique grâce au middleware auth
-      name,
-      description,
-      price,
-      unit,
-      quantity,
-      category,
-      images: images || [],
-      city,
+      ...data,
+      seller_id: req.user.id
     });
 
-    res.status(201).json({
-      message: 'Produit publié avec succès ! 🎉',
-      produit,
-    });
-
+    res.status(201).json(produit);
   } catch (erreur) {
-    console.error('❌ Erreur createProduct :', erreur);
-    res.status(500).json({ message: 'Erreur serveur', detail: erreur.message });
+    console.error("Erreur création :", erreur);
+    res.status(500).json({ message: erreur.message });
   }
 };
 
-// =============================================================
-// PUT /api/products/:id
-// Modifier un produit existant
-// Route protégée → seulement le propriétaire peut modifier
-// =============================================================
+// --- MODIFICATION ---
 exports.updateProduct = async (req, res) => {
   try {
-    // Chercher le produit qui appartient À CE vendeur uniquement
-    // Si quelqu'un d'autre essaie de modifier → il ne trouvera pas le produit
-    const produit = await Product.findOne({
-      where: {
-        id: req.params.id,
-        seller_id: req.user.id, // Sécurité : vérifier la propriété
-      },
-    });
+    const data = { ...req.body };
 
-    if (!produit) {
-      return res.status(404).json({
-        message: 'Produit non trouvé ou vous n\'êtes pas le propriétaire',
-      });
+    // Si on change la photo lors de la modification
+    if (req.file) {
+      data.images = JSON.stringify([req.file.filename]);
     }
 
-    // Mettre à jour avec les nouvelles données
-    // update() ne modifie que les champs fournis dans req.body
-    await produit.update(req.body);
-
-    res.json({
-      message: 'Produit mis à jour avec succès !',
-      produit,
+    const [updated] = await Product.update(data, {
+      where: { 
+        id: req.params.id, 
+        seller_id: req.user.id 
+      }
     });
 
-  } catch (erreur) {
-    res.status(500).json({ message: 'Erreur serveur', detail: erreur.message });
+    if (!updated) return res.status(404).json({ message: "Produit non trouvé" });
+    
+    res.json({ message: "Produit mis à jour ! 🎉" });
+  } catch (err) {
+    console.error("Erreur modification :", err);
+    res.status(500).json({ error: err.message });
   }
 };
 
-// =============================================================
-// DELETE /api/products/:id
-// Supprimer un produit
-// Route protégée → seulement le propriétaire peut supprimer
-// =============================================================
+// --- SUPPRESSION ---
 exports.deleteProduct = async (req, res) => {
   try {
-    const produit = await Product.findOne({
-      where: {
-        id: req.params.id,
-        seller_id: req.user.id,
-      },
+    const deleted = await Product.destroy({
+      where: { id: req.params.id, seller_id: req.user.id }
     });
-
-    if (!produit) {
-      return res.status(404).json({
-        message: 'Produit non trouvé ou accès refusé',
-      });
-    }
-
-    await produit.destroy(); // Supprime définitivement de la DB
-
-    res.json({ message: 'Produit supprimé avec succès' });
-
-  } catch (erreur) {
-    res.status(500).json({ message: 'Erreur serveur', detail: erreur.message });
+    if (!deleted) return res.status(404).json({ message: "Produit non trouvé" });
+    res.json({ message: "Supprimé avec succès" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 };
-
+exports.getCountByCity = async (req, res) => {
+  try {
+    const products = await Product.findAll({
+      attributes: ['city', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
+      group: ['city']
+    });
+    const counts = {};
+    products.forEach(p => { counts[p.city] = p.get('count'); });
+    res.json(counts);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
 // =============================================================
 // GET /api/products/promos
 // Récuperer uniquement les produits en promotion (is_promo = 1)
@@ -365,3 +336,36 @@ exports.getPromos = async (req, res) => {
     res.status(500).json({ message: 'Erreur serveur', detail: erreur.message });
   }
 };
+
+// =============================================================
+// GET /api/products/count-by-city
+// Retourne le nombre de produits disponibles par ville
+// Ex: { "Tanger": 12, "Casablanca": 5, "Agadir": 3 }
+// ✅ FIX : sequelize importé depuis ../models (pas depuis le package)
+// =============================================================
+exports.getCountByCity = async (req, res) => {
+  try {
+    const { sequelize } = require('../models')
+
+    const rows = await Product.findAll({
+      where: { is_available: true },
+      attributes: [
+        'city',
+        [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+      ],
+      group:  ['city'],
+      order:  [[sequelize.fn('COUNT', sequelize.col('id')), 'DESC']]
+    })
+
+    // { Tanger: 12, Casablanca: 5, ... }
+    const counts = {}
+    rows.forEach(r => {
+      if (r.city) counts[r.city] = parseInt(r.get('count'))
+    })
+
+    res.json(counts)
+  } catch (err) {
+    console.error('❌ getCountByCity :', err.message)
+    res.status(500).json({ error: err.message })
+  }
+}
