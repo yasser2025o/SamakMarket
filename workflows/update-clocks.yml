@@ -12,31 +12,57 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Generate Clocks Text
-        run: |
-          # Récupération des heures et des dates du jour
-          TOKYO=$(TZ="Asia/Tokyo" date +"%H:%M")
-          TANGER=$(TZ="Africa/Casablanca" date +"%H:%M")
-          NEWYORK=$(TZ="America/New_York" date +"%H:%M")
-          SINGAPOUR=$(TZ="Asia/Singapore" date +"%H:%M")
-          DATE_UPDATE=$(TZ="Africa/Casablanca" date +"%d/%m/%Y à %H:%M (Heure Maroc)")
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
 
-          # Construction d'un tableau de texte Markdown pur (sans image externe)
-          HTML_CONTENT="<div align=\"center\">\n\n"
-          HTML_CONTENT+="| 🗼 TOKYO | 🇲🇦 TANGER | 🗽 NEW YORK | 🇸🇬 SINGAPOUR |\n"
-          HTML_CONTENT+="| :---: | :---: | :---: | :---: |\n"
-          HTML_CONTENT+="| **$TOKYO** | **$TANGER** | **$NEWYORK** | **$SINGAPOUR** |\n\n"
-          HTML_CONTENT+="<sub>*Dernière synchronisation : $DATE_UPDATE*</sub>\n"
-          HTML_CONTENT+="</div>"
+      - name: Generate Clocks and Update README
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
 
-          # Injection dans le README
-          sed -i "/<!-- START_SECTION:clocks -->/,/<!-- END_SECTION:clocks -->/{//!d}" README.md
-          sed -i "/<!-- START_SECTION:clocks -->/r "<(echo -e "$HTML_CONTENT")"" README.md
+            // Options de formatage de l'heure
+            const options = { hour: '2-digit', minute: '2-digit', hour12: false };
+
+            // Récupération des heures par fuseau horaire
+            const tokyo = new Date().toLocaleTimeString('fr-FR', { ...options, timeZone: 'Asia/Tokyo' });
+            const tanger = new Date().toLocaleTimeString('fr-FR', { ...options, timeZone: 'Africa/Casablanca' });
+            const newyork = new Date().toLocaleTimeString('fr-FR', { ...options, timeZone: 'America/New_York' });
+            const singapour = new Date().toLocaleTimeString('fr-FR', { ...options, timeZone: 'Asia/Singapore' });
+            
+            // Date de mise à jour au format Maroc
+            const dateUpdate = new Date().toLocaleDateString('fr-FR', { 
+              timeZone: 'Africa/Casablanca', 
+              day: '2-digit', 
+              month: '2-digit', 
+              year: 'numeric' 
+            }) + ' à ' + tanger + ' (Heure Maroc)';
+
+            // Construction du tableau Markdown professionnel
+            let htmlContent = "<div align=\"center\">\n\n";
+            htmlContent += "| 🗼 TOKYO | 🇲🇦 TANGER | 🗽 NEW YORK | 🇸🇬 SINGAPOUR |\n";
+            htmlContent += "| :---: | :---: | :---: | :---: |\n";
+            htmlContent += "| **" + tokyo + "** | **" + tanger + "** | **" + newyork + "** | **" + singapour + "** |\n\n";
+            htmlContent += "<sub>*Dernière synchronisation : " + dateUpdate + "*</sub>\n";
+            htmlContent += "</div>";
+
+            // Lecture et remplacement sécurisé dans le fichier README.md
+            let readme = fs.readFileSync('README.md', 'utf8');
+            const startMarker = '<!-- START_SECTION:clocks -->';
+            const endMarker = '<!-- END_SECTION:clocks -->';
+            
+            const regex = new RegExp(`${startMarker}[\\s\\S]*?${endMarker}`);
+            const newContent = `${startMarker}\n${htmlContent}\n${endMarker}`;
+            
+            readme = readme.replace(regex, newContent);
+            fs.writeFileSync('README.md', readme, 'utf8');
 
       - name: Commit and Push Changes
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@://github.com"
           git add README.md
-          git diff-index --quiet HEAD || git commit -m "chore: update world clocks to text [skip ci]"
+          git diff-index --quiet HEAD || git commit -m "chore: update world clocks via node [skip ci]"
           git push
