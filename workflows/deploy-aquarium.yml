@@ -1,0 +1,41 @@
+name: Deploy SamakMarket Aquarium
+
+on:
+  push:
+    branches:
+      - main # S'exécute à chaque push sur la branche principale
+  workflow_dispatch: # Permet un déclenchement manuel
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Validate HTML Structure
+        run: |
+          if [ ! -f "aqua.html" ]; then
+            echo "Erreur : Le fichier aqua.html est introuvable à la racine."
+            exit 1
+          fi
+          echo "Fichier aqua.html détecté et validé avec succès."
+
+      # OPTION : Si tu souhaites utiliser GitHub Pages pour héberger la page aqua.html gratuitement
+      - name: Upload Artifact for GitHub Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.' # Déploie les fichiers à la racine (dont aqua.html)
+
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
