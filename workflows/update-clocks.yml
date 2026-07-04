@@ -1,4 +1,4 @@
-name: Update World Clocks (Shields Edition)
+name: Update World Clocks (Shields Fixed)
 
 on:
   schedule:
@@ -13,12 +13,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4 # Les runners forcent déjà le passage à Node 24 ici
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '24' # Mise à niveau vers Node.js 24 pour supprimer le warning
+          node-version: '24'
 
       - name: Generate Badges and Update README
         uses: actions/github-script@v7
@@ -26,7 +26,7 @@ jobs:
           script: |
             const fs = require('fs');
 
-            // Configuration du formatage de l'heure
+            // Formater l'heure de façon simple (HH:mm)
             const options = { hour: '2-digit', minute: '2-digit', hour12: false };
 
             const tokyo = new Date().toLocaleTimeString('fr-FR', { ...options, timeZone: 'Asia/Tokyo' });
@@ -34,21 +34,26 @@ jobs:
             const newyork = new Date().toLocaleTimeString('fr-FR', { ...options, timeZone: 'America/New_York' });
             const singapour = new Date().toLocaleTimeString('fr-FR', { ...options, timeZone: 'Asia/Singapore' });
             
-            // Formatage de la date de mise à jour (UTC)
+            // Formatage propre de la date UTC
             const now = new Date();
             const pad = (n) => String(n).padStart(2, '0');
             const dateUTC = `${pad(now.getUTCDate())}/${pad(now.getUTCMonth() + 1)}/${now.getUTCFullYear()}`;
             const timeUTC = `${pad(now.getUTCHours())}:${pad(now.getUTCMinutes())}`;
             const dateUpdate = `${dateUTC} ${timeUTC} UTC`;
 
-            const cleanLabel = (text) => encodeURIComponent(text).replace(/-/g, '--');
+            // Fonction robuste pour générer l'URL Query String de Shields.io sans casser avec les emojis
+            const makeBadgeUrl = (label, time) => {
+              const encodedLabel = encodeURIComponent(label);
+              const encodedTime = encodeURIComponent(time);
+              return `https://img.shields.io/static/v1?label=${encodedLabel}&message=${encodedTime}&color=111111&labelColor=21262d&style=for-the-badge`;
+            };
 
-            // --- RECONSTRUCTION DU BLOC TEXTE DARK ---
+            // --- RECONSTRUCTION DU BLOC TEXTE ---
             let content = `<div align="center">\n`;
-            content += `  <img src="https://img.shields.io/badge/${cleanLabel('🇲🇦 Tanger')}-${tanger}-111111?style=for-the-badge&labelColor=21262d" alt="Tanger" />\n`;
-            content += `  <img src="https://img.shields.io/badge/${cleanLabel('🗼 Tokyo')}-${tokyo}-111111?style=for-the-badge&labelColor=21262d" alt="Tokyo" />\n`;
-            content += `  <img src="https://img.shields.io/badge/${cleanLabel('🇸🇬 Singapour')}-${singapour}-111111?style=for-the-badge&labelColor=21262d" alt="Singapour" />\n`;
-            content += `  <img src="https://img.shields.io/badge/${cleanLabel('🗽 New York')}-${newyork}-111111?style=for-the-badge&labelColor=21262d" alt="New York" />\n`;
+            content += `  <img src="${makeBadgeUrl('🇲🇦 Tanger', tanger)}" alt="Tanger" />\n`;
+            content += `  <img src="${makeBadgeUrl('🗼 Tokyo', tokyo)}" alt="Tokyo" />\n`;
+            content += `  <img src="${makeBadgeUrl('🇸🇬 Singapour', singapour)}" alt="Singapour" />\n`;
+            content += `  <img src="${makeBadgeUrl('🗽 New York', newyork)}" alt="New York" />\n`;
             content += `  <br />\n`;
             content += `  <sub><i>Dernière mise à jour : ${dateUpdate}</i></sub>\n\n`;
             
@@ -74,5 +79,5 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add README.md
-          git diff-index --quiet HEAD || git commit -m "chore: update world clocks badges to node 24 [skip ci]"
+          git diff-index --quiet HEAD || git commit -m "chore: fix and update world clocks badges [skip ci]"
           git push
