@@ -1,9 +1,14 @@
-name: Update World Clocks
+name: Update World Clocks (Pro Dark Edition)
 
 on:
   schedule:
+    # S'exécute toutes les heures
     - cron: '0 * * * *'
   workflow_dispatch:
+
+# Sécurité renforcée pour permettre l'écriture sur le README
+permissions:
+  contents: write
 
 jobs:
   update-readme:
@@ -15,46 +20,71 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: '20' # Version LTS stable recommandée pour GitHub Actions
 
-      - name: Generate Clocks and Update README
+      - name: Generate Dark Dashboard and Update README
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
 
-            // Options de formatage de l'heure
-            const options = { hour: '2-digit', minute: '2-digit', hour12: false };
+            // Options de formatage de l'heure et date
+            const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: false };
+            const dateOptions = { day: '2-digit', month: 'short', year: 'numeric' };
 
-            // Récupération des heures par fuseau horaire
-            const tokyo = new Date().toLocaleTimeString('fr-FR', { ...options, timeZone: 'Asia/Tokyo' });
-            const tanger = new Date().toLocaleTimeString('fr-FR', { ...options, timeZone: 'Africa/Casablanca' });
-            const newyork = new Date().toLocaleTimeString('fr-FR', { ...options, timeZone: 'America/New_York' });
-            const singapour = new Date().toLocaleTimeString('fr-FR', { ...options, timeZone: 'Asia/Singapore' });
+            const tokyoTime = new Date().toLocaleTimeString('fr-FR', { ...timeOptions, timeZone: 'Asia/Tokyo' });
+            const tangerTime = new Date().toLocaleTimeString('fr-FR', { ...timeOptions, timeZone: 'Africa/Casablanca' });
+            const nyTime = new Date().toLocaleTimeString('fr-FR', { ...timeOptions, timeZone: 'America/New_York' });
+            const sgTime = new Date().toLocaleTimeString('fr-FR', { ...timeOptions, timeZone: 'Asia/Singapore' });
             
-            // Date de mise à jour au format Maroc
-            const dateUpdate = new Date().toLocaleDateString('fr-FR', { 
-              timeZone: 'Africa/Casablanca', 
-              day: '2-digit', 
-              month: '2-digit', 
-              year: 'numeric' 
-            }) + ' à ' + tanger + ' (Heure Maroc)';
+            const dateUpdate = new Date().toLocaleDateString('fr-FR', { ...dateOptions, timeZone: 'Africa/Casablanca' }) + ' ' + tangerTime;
 
-            // Construction du tableau Markdown professionnel
-            let htmlContent = "<div align=\"center\">\n\n";
-            htmlContent += "| 🗼 TOKYO | 🇲🇦 TANGER | 🗽 NEW YORK | 🇸🇬 SINGAPOUR |\n";
-            htmlContent += "| :---: | :---: | :---: | :---: |\n";
-            htmlContent += "| **" + tokyo + "** | **" + tanger + "** | **" + newyork + "** | **" + singapour + "** |\n\n";
-            htmlContent += "<sub>*Dernière synchronisation : " + dateUpdate + "*</sub>\n";
-            htmlContent += "</div>";
+            // --- CONSTRUTION DU DESIGN GRAPHIQUE DARK / NEON ---
+            let content = `<div align="center">\n\n`;
+            
+            // Bannière Titre interactive
+            content += `  <img src="https://capsule-render.vercel.app/render?type=wave&color=0d1117&height=120&section=header&text=🌐%20GLOBAL%20OPERATIONS%20DASHBOARD&fontSize=24&fontColor=58a6ff&animation=fadeIn" width="100%" alt="Banner" />\n\n`;
+            
+            // Cartes d'horloges SVG (Look Dark Mode attractif et réactif)
+            const createClockCard = (label, time, emoji, color) => {
+              return `<svg width="160" height="90" viewBox="0 0 160 90" xmlns="http://www.w3.org/2000/svg">
+                <rect width="160" height="90" rx="10" fill="#161b22" stroke="${color}" stroke-width="1.5"/>
+                <text x="50%" y="30%" dominant-baseline="middle" text-anchor="middle" fill="#8b949e" font-family="Segoe UI, Helvetica, sans-serif" font-size="11" font-weight="600">${emoji} ${label}</text>
+                <text x="50%" y="65%" dominant-baseline="middle" text-anchor="middle" fill="#ffffff" font-family="monospace" font-size="22" font-weight="bold">${time}</text>
+              </svg>`;
+            };
 
-            // Lecture et remplacement sécurisé dans le fichier README.md
+            const clockTokyo = createClockCard('TOKYO', tokyoTime, '🗼', '#ff7b72');
+            const clockTanger = createClockCard('TANGER', tangerTime, '🇲🇦', '#58a6ff');
+            const clockNY = createClockCard('NEW YORK', nyTime, '🗽', '#79c0ff');
+            const clockSingapore = createClockCard('SINGAPOUR', sgTime, '🇸🇬', '#56d364');
+
+            // Alignement horizontal des horloges en HTML pour GitHub
+            content += `  <p align="center">\n`;
+            content += `    ${clockTanger.replace(/\n/g, '')}\n`;
+            content += `    ${clockTokyo.replace(/\n/g, '')}\n`;
+            content += `    ${clockSingapore.replace(/\n/g, '')}\n`;
+            content += `    ${clockNY.replace(/\n/g, '')}\n`;
+            content += `  </p>\n\n`;
+
+            // Informations de contact et profils techniques (Mode liste épurée avec badges)
+            content += `  --- \n\n`;
+            content += `  ### 🛠️ Connect With Me\n\n`;
+            content += `  [![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://linkedin.com/)\n`;
+            content += `  [![GitHub](https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white)](https://github.com/)\n`;
+            content += `  [![Email](https://img.shields.io/badge/Email-D14836?style=for-the-badge&logo=gmail&logoColor=white)](mailto:your-email@example.com)\n\n`;
+
+            // Info de synchronisation
+            content += `  <sub>*Dernière synchronisation infrastructure : ⏳ ${dateUpdate} (Maroc)*</sub>\n\n`;
+            content += `</div>`;
+
+            // Remplacement sécurisé dans le fichier README.md
             let readme = fs.readFileSync('README.md', 'utf8');
-            const startMarker = '<!-- START_SECTION:clocks -->';
-            const endMarker = '<!-- END_SECTION:clocks -->';
+            const startMarker = '';
+            const endMarker = '';
             
             const regex = new RegExp(`${startMarker}[\\s\\S]*?${endMarker}`);
-            const newContent = `${startMarker}\n${htmlContent}\n${endMarker}`;
+            const newContent = `${startMarker}\n${content}\n${endMarker}`;
             
             readme = readme.replace(regex, newContent);
             fs.writeFileSync('README.md', readme, 'utf8');
@@ -62,7 +92,7 @@ jobs:
       - name: Commit and Push Changes
         run: |
           git config --global user.name "github-actions[bot]"
-          git config --global user.email "41898282+github-actions[bot]@://github.com"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add README.md
-          git diff-index --quiet HEAD || git commit -m "chore: update world clocks via node [skip ci]"
+          git diff-index --quiet HEAD || git commit -m "chore: updated profile dashboard clocks [skip ci]"
           git push
