@@ -12,23 +12,24 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Generate Clocks HTML
+      - name: Generate Clocks Text
         run: |
+          # Récupération des heures et des dates du jour
           TOKYO=$(TZ="Asia/Tokyo" date +"%H:%M")
           TANGER=$(TZ="Africa/Casablanca" date +"%H:%M")
           NEWYORK=$(TZ="America/New_York" date +"%H:%M")
           SINGAPOUR=$(TZ="Asia/Singapore" date +"%H:%M")
-          DATE_UPDATE=$(TZ="UTC" date +"%d/%m/%Y %H:%M UTC")
+          DATE_UPDATE=$(TZ="Africa/Casablanca" date +"%d/%m/%Y à %H:%M (Heure Maroc)")
 
-          HTML_CONTENT="<div align=\"center\">\n"
-          HTML_CONTENT+="  <img src=\"https://shields.io🗼%20Tokyo-$TOKYO-111111?style=for-the-badge\" alt=\"Tokyo\" />\n"
-          HTML_CONTENT+="  <img src=\"https://shields.io🇲🇦%20Tanger-$TANGER-111111?style=for-the-badge\" alt=\"Tanger\" />\n"
-          HTML_CONTENT+="  <img src=\"https://shields.io🗽%20New%20York-$NEWYORK-111111?style=for-the-badge\" alt=\"New York\" />\n"
-          HTML_CONTENT+="  <img src=\"https://shields.io🇸🇬%20Singapour-$SINGAPOUR-111111?style=for-the-badge\" alt=\"Singapour\" />\n"
-          HTML_CONTENT+="  <br />\n"
-          HTML_CONTENT+="  <sub><i>Dernière mise à jour : $DATE_UPDATE</i></sub>\n"
+          # Construction d'un tableau de texte Markdown pur (sans image externe)
+          HTML_CONTENT="<div align=\"center\">\n\n"
+          HTML_CONTENT+="| 🗼 TOKYO | 🇲🇦 TANGER | 🗽 NEW YORK | 🇸🇬 SINGAPOUR |\n"
+          HTML_CONTENT+="| :---: | :---: | :---: | :---: |\n"
+          HTML_CONTENT+="| **$TOKYO** | **$TANGER** | **$NEWYORK** | **$SINGAPOUR** |\n\n"
+          HTML_CONTENT+="<sub>*Dernière synchronisation : $DATE_UPDATE*</sub>\n"
           HTML_CONTENT+="</div>"
 
+          # Injection dans le README
           sed -i "/<!-- START_SECTION:clocks -->/,/<!-- END_SECTION:clocks -->/{//!d}" README.md
           sed -i "/<!-- START_SECTION:clocks -->/r "<(echo -e "$HTML_CONTENT")"" README.md
 
@@ -37,5 +38,5 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@://github.com"
           git add README.md
-          git diff-index --quiet HEAD || git commit -m "chore: update world clocks [skip ci]"
+          git diff-index --quiet HEAD || git commit -m "chore: update world clocks to text [skip ci]"
           git push
